@@ -4,6 +4,7 @@ import numpy as np
 class Particle:
     def __init__(self, lb=-10, ub=10, num_objectives=2):
         self.position = np.random.uniform(lb, ub)
+        self.num_objectives = num_objectives
         self.velocity = np.zeros_like(self.position)
         self.best_position = self.position
         self.best_fitness = np.ones(self.num_objectives)
@@ -21,9 +22,9 @@ class Particle:
 
     def set_fitness(self, fitness):
         self.fitness = np.array(fitness)
-        if any(self.best_fitness == np.zeros(self.num_objectives)):
+        if np.any(self.best_fitness == np.zeros(self.num_objectives)):
             self.fitness = np.ones(self.num_objectives)
-        if all(self.fitness < self.best_fitness):
+        if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
             
@@ -53,7 +54,7 @@ class MOPSO:
         self.num_iterations = num_iterations
         self.max_iter_no_improv = max_iter_no_improv
         self.optimization_mode = optimization_mode
-        self.particles = [Particle(lb, ub) for _ in range(num_particles)]
+        self.particles = [Particle(lb, ub, self.num_objectives) for _ in range(num_particles)]
         self.global_best_position = np.zeros_like(lb)
         self.global_best_fitness = [np.inf] * self.num_objectives
         self.history = []
@@ -64,7 +65,7 @@ class MOPSO:
                 for particle in self.particles:
                     particle.evaluate_fitness(self.objective_functions)
 
-                    if all(particle.fitness < self.global_best_fitness):
+                    if np.all(particle.fitness < self.global_best_fitness):
                         self.global_best_fitness = particle.fitness
                         self.global_best_position = particle.position
 
@@ -82,7 +83,7 @@ class MOPSO:
                                        for objective_function in self.objective_functions]
                 for i, particle in enumerate(self.particles):
                     particle.set_fitness([output[i] for output in optimization_output])
-                    if all(particle.fitness < self.global_best_fitness):
+                    if np.all(particle.fitness < self.global_best_fitness):
                         self.global_best_fitness = particle.fitness
                         self.global_best_position = particle.position
 
@@ -101,13 +102,13 @@ class MOPSO:
         return pareto_front
 
     def update_particle_best(self, particle):
-        if any(particle.fitness < particle.best_fitness):
+        if np.any(particle.fitness < particle.best_fitness):
             particle.best_fitness = particle.fitness
             particle.best_position = particle.position
 
     def update_global_best(self):
         for particle in self.particles:
-            if all(particle.fitness <= self.global_best_fitness):
+            if np.all(particle.fitness <= self.global_best_fitness):
                 self.global_best_fitness = particle.fitness
                 self.global_best_position = particle.position
 
@@ -116,7 +117,7 @@ class MOPSO:
         for particle in self.particles:
             dominated = False
             for other_particle in self.particles:
-                if all(particle.fitness >= other_particle.fitness) and any(particle.fitness > other_particle.fitness):
+                if np.all(particle.fitness >= other_particle.fitness) and np.any(particle.fitness > other_particle.fitness):
                     dominated = True
                     break
             if not dominated:
