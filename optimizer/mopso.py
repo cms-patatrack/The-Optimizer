@@ -19,15 +19,17 @@ class Particle:
     def update_position(self, lb, ub):
         self.position = np.clip(self.position + self.velocity, lb, ub)
 
-    def evaluate_fitness(self, objective_functions):
-        self.fitness = np.array([obj_func(self.position)
-                                for obj_func in objective_functions])
+    def set_fitness(self, fitness):
+        self.fitness = np.array(fitness)
         if any(self.best_fitness == np.zeros(self.num_objectives)):
             self.fitness = np.ones(self.num_objectives)
         if all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
-
+            
+    def evaluate_fitness(self, objective_functions):
+        fitness = [obj_func(self.position) for obj_func in objective_functions]
+        self.set_fitness(fitness)
 
 class MOPSO:
     def __init__(self, objective_functions,
@@ -58,23 +60,41 @@ class MOPSO:
 
     def optimize(self):
         for i in range(self.num_iterations):
-            for particle in self.particles:
-                if self.optimization_mode == 'individual':
+            if self.optimization_mode == 'individual':
+                for particle in self.particles:
                     particle.evaluate_fitness(self.objective_functions)
 
-                if all(particle.fitness < self.global_best_fitness):
-                    self.global_best_fitness = particle.fitness
-                    self.global_best_position = particle.position
+                    if all(particle.fitness < self.global_best_fitness):
+                        self.global_best_fitness = particle.fitness
+                        self.global_best_position = particle.position
 
-                self.update_particle_best(particle)
-                self.update_global_best()
+                    self.update_particle_best(particle)
+                    self.update_global_best()
 
-                particle.update_velocity(self.global_best_position,
-                                         self.inertia_weight,
-                                         self.cognitive_coefficient,
-                                         self.social_coefficient)
-                particle.update_position(self.lower_bounds, self.upper_bounds)
+                    particle.update_velocity(self.global_best_position,
+                                            self.inertia_weight,
+                                            self.cognitive_coefficient,
+                                            self.social_coefficient)
+                    particle.update_position(self.lower_bounds, self.upper_bounds)
+            
+            if self.optimization_mode == 'global':
+                optimization_output = [objective_function([particle.position for particle in self.particles]) 
+                                       for objective_function in self.objective_functions]
+                for i, particle in enumerate(self.particles):
+                    particle.set_fitness([output[i] for output in optimization_output])
+                    if all(particle.fitness < self.global_best_fitness):
+                        self.global_best_fitness = particle.fitness
+                        self.global_best_position = particle.position
 
+                    self.update_particle_best(particle)
+                    self.update_global_best()
+
+                    particle.update_velocity(self.global_best_position,
+                                            self.inertia_weight,
+                                            self.cognitive_coefficient,
+                                            self.social_coefficient)
+                    particle.update_position(self.lower_bounds, self.upper_bounds)
+                    
             self.history.append(self.global_best_fitness)
 
         pareto_front = self.get_pareto_front()
