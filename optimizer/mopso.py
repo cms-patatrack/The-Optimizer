@@ -6,8 +6,8 @@ class Particle:
         self.position = np.random.uniform(lb, ub)
         self.velocity = np.zeros_like(self.position)
         self.best_position = self.position
-        self.best_fitness = [np.inf] * num_objectives  # inf for minimization
-        self.fitness = np.zeros(num_objectives)
+        self.best_fitness = np.ones(self.num_objectives)
+        self.fitness = np.ones(self.num_objectives)
 
     def update_velocity(self, global_best_position, w=0.5, c1=1, c2=1):
         r1 = np.random.uniform(0, 1)
@@ -22,7 +22,9 @@ class Particle:
     def evaluate_fitness(self, objective_functions):
         self.fitness = np.array([obj_func(self.position)
                                 for obj_func in objective_functions])
-        if any(self.fitness < self.best_fitness):
+        if any(self.best_fitness == np.zeros(self.num_objectives)):
+            self.fitness = np.ones(self.num_objectives)
+        if all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
 
