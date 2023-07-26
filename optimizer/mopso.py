@@ -1,115 +1,258 @@
+"""
+mopso.py
+
+This module implements the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm,
+a heuristic optimization algorithm used to find the Pareto front of non-dominated solutions
+for multi-objective optimization problems.
+
+The MOPSO algorithm works by maintaining a population of particles, each representing a potential
+solution to the optimization problem. The particles are iteratively updated by considering their
+velocity and position in the search space, aiming to converge towards the Pareto front of the
+problem's solution space.
+
+This module contains two classes:
+    - Particle: Represents a particle in the MOPSO algorithm.
+    - MOPSO: Multi-Objective Particle Swarm Optimization algorithm.
+
+Both classes are designed to be used in conjunction to perform the MOPSO optimization process and
+find the Pareto front of non-dominated solutions.
+"""
 import numpy as np
 
 
 class Particle:
-    def __init__(self, lb=-10, ub=10, num_objectives=2):
-        self.position = np.random.uniform(lb, ub)
+    """
+    Represents a particle in the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
+
+    Parameters:
+        lower_bound (float): Lower bound for the particle's position.
+        upper_bound (float): Upper bound for the particle's position.
+        num_objectives (int): Number of objectives in the optimization problem.
+
+    Attributes:
+        position (float): Current position of the particle.
+        num_objectives (int): Number of objectives in the optimization problem.
+        velocity (float): Current velocity of the particle.
+        best_position (float): Best position the particle has visited.
+        best_fitness (numpy.ndarray): Best fitness values achieved by the particle.
+        fitness (numpy.ndarray): Current fitness values of the particle.
+    """
+
+    def __init__(self, lower_bound=-10, upper_bound=10, num_objectives=2):
+        self.position = np.random.uniform(lower_bound, upper_bound)
         self.num_objectives = num_objectives
         self.velocity = np.zeros_like(self.position)
         self.best_position = self.position
         self.best_fitness = np.ones(self.num_objectives)
         self.fitness = np.ones(self.num_objectives)
 
-    def update_velocity(self, global_best_position, w=0.5, c1=1, c2=1):
-        r1 = np.random.uniform(0, 1)
-        r2 = np.random.uniform(0, 1)
-        cognitive = c1 * r1 * (self.best_position - self.position)
-        social = c2 * r2 * (global_best_position - self.position)
-        self.velocity = w * self.velocity + cognitive + social
+    def update_velocity(self,
+                        global_best_position, inertia_weight=0.5,
+                        cognitive_coefficient=1, social_coefficient=1):
+        """
+        Update the particle's velocity based on its best position and the global best position.
 
-    def update_position(self, lb, ub):
-        self.position = np.clip(self.position + self.velocity, lb, ub)
+        Parameters:
+            global_best_position (numpy.ndarray): Global best position in the swarm.
+            inertia_weight (float): Inertia weight controlling the impact of the previous velocity
+                                    (default is 0.5).
+            cognitive_coefficient (float): Cognitive coefficient controlling the impact of personal
+                                           best (default is 1).
+            social_coefficient (float): Social coefficient controlling the impact of global best
+                                        (default is 1).
+        """
+        cognitive_random = np.random.uniform(0, 1)
+        social_random = np.random.uniform(0, 1)
+        cognitive = cognitive_coefficient * cognitive_random * \
+            (self.best_position - self.position)
+        social = social_coefficient * social_random * \
+            (global_best_position - self.position)
+        self.velocity = inertia_weight * self.velocity + cognitive + social
+
+    def update_position(self, lower_bound, upper_bound):
+        """
+        Update the particle's position based on its current velocity and bounds.
+
+        Parameters:
+            lower_bound (float): Lower bound for the particle's position.
+            upper_bound (float): Upper bound for the particle's position.
+        """
+        self.position = np.clip(
+            self.position + self.velocity, lower_bound, upper_bound)
 
     def set_fitness(self, fitness):
+        """
+        Set the fitness values of the particle and calls `update_best` method to update the
+        particle's fitness and best position.
+
+        Parameters:
+            fitness (numpy.ndarray): The fitness values of the particle for each objective.
+        """
         self.fitness = np.array(fitness)
+        self.update_best()
+
+    def evaluate_fitness(self, objective_functions):
+        """
+        Evaluate the fitness of the particle based on the provided objective functions.
+        Calls the `set_fitness` method to update the particle's fitness and best position.
+
+        Parameters:
+            objective_functions (list): List of objective functions used for fitness evaluation.
+        """
+        fitness = [obj_func(self.position) for obj_func in objective_functions]
+        self.set_fitness(fitness)
+
+    def update_best(self):
+        """
+        Update particle's fitness and best position
+        """
         if np.any(self.best_fitness == np.zeros(self.num_objectives)):
             self.fitness = np.ones(self.num_objectives)
         if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
 
-    def evaluate_fitness(self, objective_functions):
-        fitness = [obj_func(self.position) for obj_func in objective_functions]
-        self.set_fitness(fitness)
-
 
 class MOPSO:
+    """
+    Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
+
+    Parameters:
+        objective_functions (list): List of objective functions to be minimized.
+        lower_bound (float): Lower bound for the particles' positions.
+        upper_bound (float): Upper bound for the particles' positions.
+        num_particles (int): Number of particles in the swarm (default is 50).
+        inertia_weight (float): Inertia weight controlling the impact of the previous velocity
+                                (default is 0.5).
+        cognitive_coefficient (float): Cognitive coefficient controlling the impact of personal
+                                       best (default is 1).
+        social_coefficient (float): Social coefficient controlling the impact of global best
+                                    (default is 1).
+        num_iterations (int): Number of iterations for the optimization process (default is 100).
+        optimization_mode (str): Mode for updating particle fitness: 'individual' or 'global'
+                                 (default is 'individual').
+        max_iter_no_improv (int): Maximum number of iterations without improvement
+                                  (default is None).
+        num_objectives (int): Number of objectives in the optimization problem (default is None,
+                              calculated from objective_functions).
+
+    Attributes:
+        objective_functions (list): List of objective functions to be minimized.
+        num_objectives (int): Number of objectives in the optimization problem.
+        num_particles (int): Number of particles in the swarm.
+        lower_bounds (float): Lower bound for the particles' positions.
+        upper_bounds (float): Upper bound for the particles' positions.
+        inertia_weight (float): Inertia weight controlling the impact of the previous velocity.
+        cognitive_coefficient (float): Cognitive coefficient controlling the impact of
+                                       personal best.
+        social_coefficient (float): Social coefficient controlling the impact of global best.
+        num_iterations (int): Number of iterations for the optimization process.
+        max_iter_no_improv (int): Maximum number of iterations without improvement.
+        optimization_mode (str): Mode for updating particle fitness: 'individual' or 'global'.
+        particles (list): List of Particle objects representing the swarm.
+        global_best_position (numpy.ndarray): Global best position in the swarm.
+        global_best_fitness (list): Global best fitness values achieved in the swarm.
+        history (list): List to store the global best fitness values at each iteration.
+
+    Methods:
+        optimize():
+            Perform the MOPSO optimization process and return the Pareto front of non-dominated
+            solutions.
+        update_global_best():
+            Update the global best position and fitness based on the swarm's particles.
+        get_pareto_front():
+            Get the Pareto front of non-dominated solutions.
+        calculate_crowding_distance(pareto_front):
+            Calculate the crowding distance for particles in the Pareto front.
+    """
+
     def __init__(self, objective_functions,
-                 lb, ub, num_particles=50,
-                 w=0.5, c1=1, c2=1,
+                 lower_bound, upper_bound, num_particles=50,
+                 intertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
                  num_objectives=None):
         self.objective_functions = objective_functions
-        if num_objectives == None:
+        if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
         else:
             self.num_objectives = num_objectives
         self.num_particles = num_particles
-        self.lower_bounds = lb
-        self.upper_bounds = ub
-        self.inertia_weight = w
-        self.cognitive_coefficient = c1
-        self.social_coefficient = c2
+        self.lower_bounds = lower_bound
+        self.upper_bounds = upper_bound
+        self.inertia_weight = intertia_weight
+        self.cognitive_coefficient = cognitive_coefficient
+        self.social_coefficient = social_coefficient
         self.num_iterations = num_iterations
         self.max_iter_no_improv = max_iter_no_improv
         self.optimization_mode = optimization_mode
-        self.particles = [Particle(lb, ub, self.num_objectives)
+        self.particles = [Particle(lower_bound, upper_bound, self.num_objectives)
                           for _ in range(num_particles)]
-        self.global_best_position = np.zeros_like(lb)
+        self.global_best_position = np.zeros_like(lower_bound)
         self.global_best_fitness = [np.inf] * self.num_objectives
         self.history = []
 
     def optimize(self):
-        for i in range(self.num_iterations):
+        """
+        Perform the MOPSO optimization process and return the Pareto front of non-dominated
+        solutions.
+
+        Returns:
+            list: List of Particle objects representing the Pareto front of non-dominated solutions.
+        """
+        for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
-                optimization_output = [objective_function([particle.position for particle in self.particles])
+                optimization_output = [objective_function([particle.position for
+                                                           particle in self.particles])
                                        for objective_function in self.objective_functions]
-            for particle in self.particles:
+            for p_id, particle in enumerate(self.particles):
                 if self.optimization_mode == 'individual':
                     particle.evaluate_fitness(self.objective_functions)
                 if self.optimization_mode == 'global':
-                    particle.set_fitness([output[i]
+                    particle.set_fitness([output[p_id]
                                          for output in optimization_output])
+                if np.all(particle.fitness < self.global_best_fitness):
+                    self.global_best_fitness = particle.fitness
+                    self.global_best_position = particle.position
 
-                for i, particle in enumerate(self.particles):
-                    if np.all(particle.fitness < self.global_best_fitness):
-                        self.global_best_fitness = particle.fitness
-                        self.global_best_position = particle.position
+                particle.update_best()
+                self.update_global_best()
 
-                    self.update_particle_best(particle)
-                    self.update_global_best()
-
-                    particle.update_velocity(self.global_best_position,
-                                             self.inertia_weight,
-                                             self.cognitive_coefficient,
-                                             self.social_coefficient)
-                    particle.update_position(
-                        self.lower_bounds, self.upper_bounds)
+                particle.update_velocity(self.global_best_position,
+                                         self.inertia_weight,
+                                         self.cognitive_coefficient,
+                                         self.social_coefficient)
+                particle.update_position(
+                    self.lower_bounds, self.upper_bounds)
 
             self.history.append(self.global_best_fitness)
 
         pareto_front = self.get_pareto_front()
         return pareto_front
 
-    def update_particle_best(self, particle):
-        if np.any(particle.fitness < particle.best_fitness):
-            particle.best_fitness = particle.fitness
-            particle.best_position = particle.position
-
     def update_global_best(self):
+        """
+        Update the global best position and fitness based on the swarm's particles.
+        """
         for particle in self.particles:
             if np.all(particle.fitness <= self.global_best_fitness):
                 self.global_best_fitness = particle.fitness
                 self.global_best_position = particle.position
 
     def get_pareto_front(self):
+        """
+        Get the Pareto front of non-dominated solutions.
+
+        Returns:
+            list: List of Particle objects representing the Pareto front.
+        """
         pareto_front = []
         for particle in self.particles:
             dominated = False
             for other_particle in self.particles:
-                if np.all(particle.fitness >= other_particle.fitness) and np.any(particle.fitness > other_particle.fitness):
+                if np.all(particle.fitness >= other_particle.fitness) and \
+                   np.any(particle.fitness > other_particle.fitness):
                     dominated = True
                     break
             if not dominated:
@@ -120,6 +263,16 @@ class MOPSO:
         return pareto_front
 
     def calculate_crowding_distance(self, pareto_front):
+        """
+        Calculate the crowding distance for particles in the Pareto front.
+
+        Parameters:
+            pareto_front (list): List of Particle objects representing the Pareto front.
+
+        Returns:
+            dict: A dictionary with Particle objects as keys and their corresponding crowding
+                  distances as values.
+        """
         crowding_distances = {particle: 0 for particle in pareto_front}
         for objective_index in range(self.num_objectives):
             # Sort the Pareto front by the current objective function
