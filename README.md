@@ -7,8 +7,6 @@ The package is developed with the objectives of CMS and Patatrack in mind.
   - [Installation](#installation)
   - [Usage](#usage)
     - [Objective Function](#objective-function)
-    - [MOPSO arguments](#mopso-arguments)
-    - [Optimization result](#optimization-result)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -60,8 +58,27 @@ Currently the package provides the `mopso.py` module that defines two classes: `
     ```
 
 ### Objective Function
-### MOPSO arguments
-### Optimization result
+
+Depending on the optimization mode (see [next section](#mopso-arguments)), the Objective function can be defined in two way:
+
+In `individual` mode, the objective function is evaluated particle by particle at every iteration and is called as:
+
+```python
+objective_funciton(self.position) # self is a Particle object
+```
+
+the argument of the optimization function is an array of elements corresponding to the parameters to optimize. The output is the fitness of the particle: the value(s) to minimize in order to solve the optimization problem. 
+
+See [run_mopso.py](example/run_mopso.py) for an example.
+
+in `global` mode, the objective function is evaluated once per iteration and is called as:
+
+```python
+objective_function([particle.position for particle in self.particles])
+```
+the argument of the optimization function is a list of arrays: nn array of parameters for each particle. The output is a list of fitnesses: the value(s) to minimize for each particle.
+
+See [run_mopso.py](example/run_track_mopso.py) for an example.
 
 ## Contributing
 Contributions are welcome. If you want to contribute, please follow the [Contribution guidelines](CONTRIBUTING.md).
