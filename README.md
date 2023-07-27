@@ -59,7 +59,7 @@ Currently the package provides the `mopso.py` module that defines two classes: `
 
 ### Objective Function
 
-Depending on the optimization mode (see [next section](#mopso-arguments)), the Objective function can be defined in two way:
+Depending on the optimization mode, the Objective function can be defined in two way:
 
 In `individual` mode, the objective function is evaluated particle by particle at every iteration and is called as:
 
