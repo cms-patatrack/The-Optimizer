@@ -25,15 +25,15 @@ class Particle:
     Represents a particle in the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
 
     Parameters:
-        lower_bound (float): Lower bound for the particle's position.
-        upper_bound (float): Upper bound for the particle's position.
+        lower_bound (numpy.ndarray): Lower bound for the particle's position.
+        upper_bound (numpy.ndarray): Upper bound for the particle's position.
         num_objectives (int): Number of objectives in the optimization problem.
 
     Attributes:
-        position (float): Current position of the particle.
+        position (numpy.ndarray): Current position of the particle.
         num_objectives (int): Number of objectives in the optimization problem.
-        velocity (float): Current velocity of the particle.
-        best_position (float): Best position the particle has visited.
+        velocity (numpy.ndarray): Current velocity of the particle.
+        best_position (numpy.ndarray): Best position the particle has visited.
         best_fitness (numpy.ndarray): Best fitness values achieved by the particle.
         fitness (numpy.ndarray): Current fitness values of the particle.
     """
@@ -74,8 +74,8 @@ class Particle:
         Update the particle's position based on its current velocity and bounds.
 
         Parameters:
-            lower_bound (float): Lower bound for the particle's position.
-            upper_bound (float): Upper bound for the particle's position.
+            lower_bound (numpy.ndarray): Lower bound for the particle's position.
+            upper_bound (numpy.ndarray): Upper bound for the particle's position.
         """
         self.position = np.clip(
             self.position + self.velocity, lower_bound, upper_bound)
@@ -119,8 +119,8 @@ class MOPSO:
 
     Parameters:
         objective_functions (list): List of objective functions to be minimized.
-        lower_bound (float): Lower bound for the particles' positions.
-        upper_bound (float): Upper bound for the particles' positions.
+        lower_bound (numpy.ndarray): Lower bound for the particles' positions.
+        upper_bound (numpy.ndarray): Upper bound for the particles' positions.
         num_particles (int): Number of particles in the swarm (default is 50).
         inertia_weight (float): Inertia weight controlling the impact of the previous velocity
                                 (default is 0.5).
@@ -140,8 +140,8 @@ class MOPSO:
         objective_functions (list): List of objective functions to be minimized.
         num_objectives (int): Number of objectives in the optimization problem.
         num_particles (int): Number of particles in the swarm.
-        lower_bounds (float): Lower bound for the particles' positions.
-        upper_bounds (float): Upper bound for the particles' positions.
+        lower_bounds (numpy.ndarray): Lower bound for the particles' positions.
+        upper_bounds (numpy.ndarray): Upper bound for the particles' positions.
         inertia_weight (float): Inertia weight controlling the impact of the previous velocity.
         cognitive_coefficient (float): Cognitive coefficient controlling the impact of
                                        personal best.
