@@ -18,7 +18,7 @@ Both classes are designed to be used in conjunction to perform the MOPSO optimiz
 find the Pareto front of non-dominated solutions.
 """
 import numpy as np
-
+import copy
 
 class Particle:
     """
@@ -111,6 +111,22 @@ class Particle:
         if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
+            
+    def is_dominated(self, others):
+        """
+        Check if the particle is dominated by any other particle.
+        
+        Parameters:
+            others (list): List of other particles.
+
+        Returns:
+            list: List of Particle objects representing the Pareto front.
+        """
+        for particle in others:
+            if np.all(self.fitness >= particle.fitness) and \
+               np.any(self.fitness > particle.fitness):
+                return True
+        return False
 
 
 class MOPSO:
@@ -191,6 +207,7 @@ class MOPSO:
                           for _ in range(num_particles)]
         self.global_best_position = np.zeros_like(lower_bound)
         self.global_best_fitness = [np.inf] * self.num_objectives
+        self.pareto_front = []
         self.history = []
 
     def optimize(self):
@@ -223,13 +240,16 @@ class MOPSO:
                                          self.inertia_weight,
                                          self.cognitive_coefficient,
                                          self.social_coefficient)
+                
+            self.update_pareto_front()
+                
+            for particle in self.particles:    
                 particle.update_position(
                     self.lower_bounds, self.upper_bounds)
 
             self.history.append(self.global_best_fitness)
 
-        pareto_front = self.get_pareto_front()
-        return pareto_front
+        return self.pareto_front
 
     def update_global_best(self):
         """
@@ -239,10 +259,18 @@ class MOPSO:
             if np.all(particle.fitness <= self.global_best_fitness):
                 self.global_best_fitness = particle.fitness
                 self.global_best_position = particle.position
-
-    def get_pareto_front(self):
+                
+    def update_pareto_front(self):
         """
-        Get the Pareto front of non-dominated solutions.
+        Update the Pareto front of non-dominated solutions across all iterations.
+        """
+        particles = self.particles + self.pareto_front
+        self.pareto_front = [copy.deepcopy(particle) for particle in particles 
+                             if not particle.is_dominated(particles)]
+
+    def get_current_pareto_front(self):
+        """
+        Get the Pareto front of non-dominated solutions at current iteration.
 
         Returns:
             list: List of Particle objects representing the Pareto front.
