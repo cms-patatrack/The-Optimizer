@@ -121,7 +121,7 @@ class Particle:
             others (list): List of other particles.
 
         Returns:
-            list: List of Particle objects representing the Pareto front.
+            bool: True if the particle is dominated, False otherwise
         """
         for particle in others:
             if np.all(self.fitness >= particle.fitness) and \
@@ -169,6 +169,7 @@ class MOPSO:
         particles (list): List of Particle objects representing the swarm.
         global_best_position (numpy.ndarray): Global best position in the swarm.
         global_best_fitness (list): Global best fitness values achieved in the swarm.
+        pareto_front (list): List of Particle objects representing the Pareto front of non-dominated solutions across all iterations.
         history (list): List to store the global best fitness values at each iteration.
 
     Methods:
@@ -214,7 +215,11 @@ class MOPSO:
     def optimize(self, history_dir=None):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
-        solutions.
+        solutions. If `history_dir` is specified, the position and fitness of all particles 
+        are saved every iteration.
+        
+        Parameters:
+            history_dir (str): path to the folder where history is saved.
 
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
