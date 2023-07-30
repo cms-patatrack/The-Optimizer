@@ -18,6 +18,7 @@ Both classes are designed to be used in conjunction to perform the MOPSO optimiz
 find the Pareto front of non-dominated solutions.
 """
 import numpy as np
+import os
 import copy
 
 class Particle:
@@ -210,7 +211,7 @@ class MOPSO:
         self.pareto_front = []
         self.history = []
 
-    def optimize(self):
+    def optimize(self, history_dir=None):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions.
@@ -218,7 +219,7 @@ class MOPSO:
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        for _ in range(self.num_iterations):
+        for i in range(self.num_iterations):
             if self.optimization_mode == 'global':
                 optimization_output = [objective_function([particle.position for
                                                            particle in self.particles])
@@ -240,6 +241,14 @@ class MOPSO:
                                          self.inertia_weight,
                                          self.cognitive_coefficient,
                                          self.social_coefficient)
+            
+            if history_dir:
+                if not os.path.exists(history_dir):
+                    os.mkdir(history_dir)
+                np.savetxt(history_dir + '/iteration' + str(i) + '.csv', 
+                           [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.particles],
+                           fmt='%.18f',
+                           delimiter=',')
                 
             self.update_pareto_front()
                 
