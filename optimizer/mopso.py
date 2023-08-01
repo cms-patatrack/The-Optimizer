@@ -49,7 +49,7 @@ class Particle:
         self.fitness = np.ones(self.num_objectives)
 
     def update_velocity(self,
-                        global_best_position, inertia_weight=0.5,
+                        pareto_front, inertia_weight=0.5,
                         cognitive_coefficient=1, social_coefficient=1):
         """
         Update the particle's velocity based on its best position and the global best position.
@@ -63,12 +63,13 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
+        nearest_leader = self.nearest_neighbor(pareto_front)
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
             (self.best_position - self.position)
         social = social_coefficient * social_random * \
-            (global_best_position - self.position)
+            (nearest_leader.position - self.position)
         self.velocity = inertia_weight * self.velocity + cognitive + social
 
     def update_position(self, lower_bound, upper_bound):
@@ -120,6 +121,19 @@ class Particle:
         if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
+            
+    def nearest_neighbor(self, others):
+        min_dist = np.inf
+        nearest = None
+        for other in others:
+            dist = self.distance(other)
+            if dist < min_dist:
+                min_dist = dist
+                nearest = other
+        return nearest
+    
+    def distance(self, other):
+        return np.linalg.norm(other.position - self.position)
             
     def is_dominated(self, others):
         """
@@ -225,10 +239,7 @@ class MOPSO:
         self.optimization_mode = optimization_mode
         self.particles = [Particle(lower_bounds, upper_bounds, self.num_objectives)
                           for _ in range(num_particles)]
-        self.global_best_position = np.zeros_like(lower_bounds)
-        self.global_best_fitness = [np.inf] * self.num_objectives
         self.iteration = 0
-        self.history = []
         self.pareto_front = []
         
     def save_attributes(self, checkpoint_dir):
@@ -249,9 +260,8 @@ class MOPSO:
             'social_coefficient': self.social_coefficient,
             'max_iter_no_improv': self.max_iter_no_improv,
             'optimization_mode': self.optimization_mode,
+            'iteration': self.iteration
         }
-        if not os.path.exists(checkpoint_dir):
-            os.mkdir(checkpoint_dir)
         with open(checkpoint_dir + '/pso_attributes.json', 'w') as f:
             json.dump(pso_attributes, f, indent=4)
             
@@ -273,16 +283,8 @@ class MOPSO:
                     for particle in self.particles],
                    fmt='%.18f',
                    delimiter=',')
-        np.savetxt(checkpoint_dir + '/global_state.csv',
-                   [np.concatenate([self.global_best_position, np.ravel(self.global_best_fitness), [self.iteration]])],
-                   fmt='%.18f',
-                   delimiter=',')
         np.savetxt(checkpoint_dir + '/pareto_front.csv', 
                    [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.pareto_front],
-                   fmt='%.18f',
-                   delimiter=',')
-        np.savetxt(checkpoint_dir + '/history.csv', 
-                   self.history,
                    fmt='%.18f',
                    delimiter=',')
         
@@ -297,10 +299,8 @@ class MOPSO:
         # load saved data
         with open(checkpoint_dir + '/pso_attributes.json') as f:
             pso_attributes = json.load(f)
-        global_state = np.genfromtxt(checkpoint_dir + '/global_state.csv', delimiter=',', dtype=float)
         individual_states =  np.genfromtxt(checkpoint_dir + '/individual_states.csv', delimiter=',', dtype=float)
         pareto_front = np.genfromtxt(checkpoint_dir + '/pareto_front.csv', delimiter=',', dtype=float)
-        self.history = np.genfromtxt(checkpoint_dir + '/history.csv', delimiter=',', dtype=float).tolist()
         
         # restore pso attributes
         self.lower_bounds = pso_attributes['lower_bounds']
@@ -314,11 +314,7 @@ class MOPSO:
         self.max_iter_no_improv = pso_attributes['max_iter_no_improv']
         self.optimization_mode = pso_attributes['optimization_mode']
         self.num_iterations = num_additional_iterations
-        
-        # restore global state 
-        self.global_best_position = np.array(global_state[:self.num_params], dtype=float)
-        self.global_best_fitness = np.array(global_state[self.num_params:-1], dtype=float)
-        self.iteration = int(global_state[-1])
+        self.iteration = pso_attributes['iteration']
         
         # restore particles
         self.particles = []
@@ -358,10 +354,10 @@ class MOPSO:
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        if checkpoint_dir:
-            self.save_attributes(checkpoint_dir)
+        if history_dir and not os.path.exists(history_dir):
+            os.mkdir(history_dir)
             
-        for i in range(self.num_iterations):
+        for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
                 optimization_output = [objective_function([particle.position for
                                                            particle in self.particles])
@@ -372,21 +368,7 @@ class MOPSO:
                 if self.optimization_mode == 'global':
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
-                if np.all(particle.fitness < self.global_best_fitness):
-                    self.global_best_fitness = particle.fitness
-                    self.global_best_position = particle.position
-
-                particle.update_best()
-                self.update_global_best()
-
-                particle.update_velocity(self.global_best_position,
-                                         self.inertia_weight,
-                                         self.cognitive_coefficient,
-                                         self.social_coefficient)
-            
             if history_dir:
-                if not os.path.exists(history_dir):
-                    os.mkdir(history_dir)
                 np.savetxt(history_dir + '/iteration' + str(self.iteration) + '.csv', 
                            [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.particles],
                            fmt='%.18f',
@@ -394,26 +376,22 @@ class MOPSO:
                 
             self.update_pareto_front()
                
-            for particle in self.particles:    
+            for particle in self.particles:
+                particle.update_velocity(self.pareto_front,
+                                         self.inertia_weight,
+                                         self.cognitive_coefficient,
+                                         self.social_coefficient)  
                 particle.update_position(self.lower_bounds, self.upper_bounds)
                 
             self.iteration += 1
+
+        if checkpoint_dir:
+            if not os.path.exists(checkpoint_dir):
+                os.mkdir(checkpoint_dir)
+            self.save_attributes(checkpoint_dir)
+            self.save_state(checkpoint_dir)
             
-            if checkpoint_dir:
-                self.save_state(checkpoint_dir)
-
-            self.history.append(np.ravel(self.global_best_fitness))
-
         return self.pareto_front
-
-    def update_global_best(self):
-        """
-        Update the global best position and fitness based on the swarm's particles.
-        """
-        for particle in self.particles:
-            if np.all(particle.fitness <= self.global_best_fitness):
-                self.global_best_fitness = particle.fitness
-                self.global_best_position = particle.position
                 
     def update_pareto_front(self):
         """
