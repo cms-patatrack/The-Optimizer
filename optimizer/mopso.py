@@ -18,7 +18,7 @@ Both classes are designed to be used in conjunction to perform the MOPSO optimiz
 find the Pareto front of non-dominated solutions.
 """
 import numpy as np
-
+import copy
 
 class Particle:
     """
@@ -47,7 +47,7 @@ class Particle:
         self.fitness = np.ones(self.num_objectives)
 
     def update_velocity(self,
-                        global_best_position, inertia_weight=0.5,
+                        pareto_front, inertia_weight=0.5,
                         cognitive_coefficient=1, social_coefficient=1):
         """
         Update the particle's velocity based on its best position and the global best position.
@@ -61,12 +61,13 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
+        nearest_leader = self.nearest_neighbor(pareto_front)
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
             (self.best_position - self.position)
         social = social_coefficient * social_random * \
-            (global_best_position - self.position)
+            (nearest_leader.position - self.position)
         self.velocity = inertia_weight * self.velocity + cognitive + social
 
     def update_position(self, lower_bound, upper_bound):
@@ -111,6 +112,35 @@ class Particle:
         if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
+            
+    def nearest_neighbor(self, others):
+        min_dist = np.inf
+        nearest = None
+        for other in others:
+            dist = self.distance(other)
+            if dist < min_dist:
+                min_dist = dist
+                nearest = other
+        return nearest
+    
+    def distance(self, other):
+        return np.linalg.norm(other.position - self.position)
+            
+    def is_dominated(self, others):
+        """
+        Check if the particle is dominated by any other particle.
+        
+        Parameters:
+            others (list): List of other particles.
+
+        Returns:
+            bool: True if the particle is dominated, False otherwise
+        """
+        for particle in others:
+            if np.all(self.fitness >= particle.fitness) and \
+               np.any(self.fitness > particle.fitness):
+                return True
+        return False
 
 
 class MOPSO:
@@ -192,6 +222,8 @@ class MOPSO:
         self.global_best_position = np.zeros_like(lower_bound)
         self.global_best_fitness = [np.inf] * self.num_objectives
         self.history = []
+        self.iteration = 0
+        self.pareto_front = []
 
     def optimize(self):
         """
@@ -212,33 +244,27 @@ class MOPSO:
                 if self.optimization_mode == 'global':
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
-                if np.all(particle.fitness < self.global_best_fitness):
-                    self.global_best_fitness = particle.fitness
-                    self.global_best_position = particle.position
-
-                particle.update_best()
-                self.update_global_best()
-
-                particle.update_velocity(self.global_best_position,
+               
+            self.update_pareto_front()
+               
+            for particle in self.particles:
+                particle.update_velocity(self.pareto_front,
                                          self.inertia_weight,
                                          self.cognitive_coefficient,
-                                         self.social_coefficient)
-                particle.update_position(
-                    self.lower_bounds, self.upper_bounds)
-
-            self.history.append(self.global_best_fitness)
-
-        pareto_front = self.get_pareto_front()
-        return pareto_front
-
-    def update_global_best(self):
+                                         self.social_coefficient)  
+                particle.update_position(self.lower_bounds, self.upper_bounds)
+                
+            self.iteration += 1
+           
+        return self.pareto_front
+                
+    def update_pareto_front(self):
         """
-        Update the global best position and fitness based on the swarm's particles.
+        Update the Pareto front of non-dominated solutions across all iterations.
         """
-        for particle in self.particles:
-            if np.all(particle.fitness <= self.global_best_fitness):
-                self.global_best_fitness = particle.fitness
-                self.global_best_position = particle.position
+        particles = self.particles + self.pareto_front
+        self.pareto_front = [copy.deepcopy(particle) for particle in particles 
+                             if not particle.is_dominated(particles)]
 
     def get_pareto_front(self):
         """
