@@ -21,6 +21,7 @@ import numpy as np
 import os
 import copy
 import json
+import random
 
 class Particle:
     """
@@ -63,13 +64,13 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
-        nearest_leader = self.nearest_neighbor(pareto_front)
+        leader = random.choice(pareto_front)
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
             (self.best_position - self.position)
         social = social_coefficient * social_random * \
-            (nearest_leader.position - self.position)
+            (leader.position - self.position)
         self.velocity = inertia_weight * self.velocity + cognitive + social
 
     def update_position(self, lower_bound, upper_bound):
@@ -121,19 +122,6 @@ class Particle:
         if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
-            
-    def nearest_neighbor(self, others):
-        min_dist = np.inf
-        nearest = None
-        for other in others:
-            dist = self.distance(other)
-            if dist < min_dist:
-                min_dist = dist
-                nearest = other
-        return nearest
-    
-    def distance(self, other):
-        return np.linalg.norm(other.position - self.position)
             
     def is_dominated(self, others):
         """
