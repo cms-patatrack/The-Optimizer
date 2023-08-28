@@ -20,8 +20,8 @@ if __name__ == "__main__":
 
   # create the PSO object
   pso = optimizer.MOPSO(objective_functions=[objective_function_1, objective_function_2], 
-            lb=lb, ub=ub, num_particles=100, num_iterations=50, w=0.9, 
-            c1=2, c2=2, max_iter_no_improv=5)
+            lower_bound=lb, upper_bound=ub, num_particles=100, num_iterations=50, intertia_weight=0.9, 
+            cognitive_coefficient=2, social_coefficient=2, max_iter_no_improv=5)
 
   # run the optimization algorithm
   pareto_front = pso.optimize()
