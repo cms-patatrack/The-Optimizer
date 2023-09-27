@@ -329,7 +329,7 @@ class MOPSO:
         # restore pareto front
         self.pareto_front = []
         for i in range(len(pareto_front)):
-            particle = Particle(self.lower_bounds, self.upper_bounds, num_objectives=self.num_objectives)
+            particle = Particle(self.lower_bounds, self.upper_bounds, num_objectives=self.num_objectives, num_particles=self.num_particles)
             particle.set_state(position=pareto_front[i][:self.num_params], 
                                fitness=pareto_front[i][self.num_params:],
                                velocity=None,
