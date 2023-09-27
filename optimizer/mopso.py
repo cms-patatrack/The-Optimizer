@@ -41,9 +41,10 @@ class Particle:
         fitness (numpy.ndarray): Current fitness values of the particle.
     """
 
-    def __init__(self, lower_bound=-10, upper_bound=10, num_objectives=2):
+    def __init__(self, lower_bound, upper_bound, num_objectives, num_particles):
         self.position = np.random.uniform(lower_bound, upper_bound)
         self.num_objectives = num_objectives
+        self.num_particles = num_particles
         self.velocity = np.zeros_like(self.position)
         self.best_position = self.position
         self.best_fitness = np.ones(self.num_objectives)
@@ -51,7 +52,8 @@ class Particle:
 
     def update_velocity(self,
                         pareto_front, inertia_weight=0.5,
-                        cognitive_coefficient=1, social_coefficient=1):
+                        cognitive_coefficient=1, social_coefficient=1,
+                        diversity_coefficient=0.2):
         """
         Update the particle's velocity based on its best position and the global best position.
 
@@ -64,7 +66,10 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
-        leader = random.choice(pareto_front)
+        if int(self.num_particles * diversity_coefficient) == 0:
+            leader = pareto_front[0]
+        else:
+            leader = random.choice(pareto_front[:int(self.num_particles * diversity_coefficient)])
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
@@ -202,6 +207,7 @@ class MOPSO:
     def __init__(self, objective_functions,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
+                 diversity_coefficient=0.2,
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
@@ -222,10 +228,11 @@ class MOPSO:
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
+        self.diversity_coefficient = diversity_coefficient
         self.num_iterations = num_iterations
         self.max_iter_no_improv = max_iter_no_improv
         self.optimization_mode = optimization_mode
-        self.particles = [Particle(lower_bounds, upper_bounds, self.num_objectives)
+        self.particles = [Particle(lower_bounds, upper_bounds, num_objectives, num_particles)
                           for _ in range(num_particles)]
         self.iteration = 0
         self.pareto_front = []
@@ -246,6 +253,7 @@ class MOPSO:
             'inertia_weight': self.inertia_weight,
             'cognitive_coefficient': self.cognitive_coefficient,
             'social_coefficient': self.social_coefficient,
+            'diversity_coefficient': self.diversity_coefficient,
             'max_iter_no_improv': self.max_iter_no_improv,
             'optimization_mode': self.optimization_mode,
             'iteration': self.iteration
@@ -299,6 +307,7 @@ class MOPSO:
         self.inertia_weight = pso_attributes['inertia_weight']
         self.cognitive_coefficient = pso_attributes['cognitive_coefficient']
         self.social_coefficient = pso_attributes['social_coefficient']
+        self.diversity_coefficient = pso_attributes['diversity_coefficient']
         self.max_iter_no_improv = pso_attributes['max_iter_no_improv']
         self.optimization_mode = pso_attributes['optimization_mode']
         self.num_iterations = num_additional_iterations
@@ -368,7 +377,7 @@ class MOPSO:
                 particle.update_velocity(self.pareto_front,
                                          self.inertia_weight,
                                          self.cognitive_coefficient,
-                                         self.social_coefficient)  
+                                         self.social_coefficient)
                 particle.update_position(self.lower_bounds, self.upper_bounds)
                 
             self.iteration += 1
@@ -388,6 +397,9 @@ class MOPSO:
         particles = self.particles + self.pareto_front
         self.pareto_front = [copy.deepcopy(particle) for particle in particles 
                              if not particle.is_dominated(particles)]
+        
+        crowding_distances = self.calculate_crowding_distance(self.pareto_front)
+        self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
 
     def get_current_pareto_front(self):
         """
@@ -422,16 +434,30 @@ class MOPSO:
             dict: A dictionary with Particle objects as keys and their corresponding crowding
                   distances as values.
         """
-        crowding_distances = {particle: 0 for particle in pareto_front}
-        for objective_index in range(self.num_objectives):
-            # Sort the Pareto front by the current objective function
-            pareto_front_sorted = sorted(
-                pareto_front, key=lambda x, i=objective_index: x.fitness[i])
-            crowding_distances[pareto_front_sorted[0]] = np.inf
-            crowding_distances[pareto_front_sorted[-1]] = np.inf
-            for i in range(1, len(pareto_front_sorted)-1):
-                crowding_distances[pareto_front_sorted[i]] += (
-                    pareto_front_sorted[i+1].fitness[objective_index] -
-                    pareto_front_sorted[i-1].fitness[objective_index]
-                )
-        return crowding_distances
+        if len(pareto_front) == 0:
+            return []
+        
+        num_objectives = len(np.ravel(pareto_front[0].fitness))
+        distances = [0] * len(pareto_front)
+        point_to_distance = {}
+
+        for i in range(num_objectives):
+            # Sort by objective i
+            sorted_front = sorted(pareto_front, key=lambda x: np.ravel(x.fitness)[i])
+
+            # Set the boundary points to infinity
+            distances[0] = float('inf')
+            distances[-1] = float('inf')
+
+            # Normalize the objective values for calculation
+            min_obj = np.ravel(sorted_front[0].fitness)[i]
+            max_obj = np.ravel(sorted_front[-1].fitness)[i]
+            norm_denom = max_obj - min_obj if max_obj != min_obj else 1
+
+            for j in range(1, len(pareto_front) - 1):
+                distances[j] += (np.ravel(sorted_front[j + 1].fitness)[i] - np.ravel(sorted_front[j - 1].fitness)[i]) / norm_denom
+
+        for i, point in enumerate(pareto_front):
+            point_to_distance[point] = distances[i]
+
+        return point_to_distance
