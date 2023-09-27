@@ -316,7 +316,7 @@ class MOPSO:
         # restore particles
         self.particles = []
         for i in range(self.num_particles):
-            particle = Particle(self.lower_bounds, self.upper_bounds, num_objectives=self.num_objectives)
+            particle = Particle(self.lower_bounds, self.upper_bounds, num_objectives=self.num_objectives, num_particles=self.num_particles)
             particle.set_state(
                 position=np.array(individual_states[i][:self.num_params], dtype=float),
                 velocity=np.array(individual_states[i][self.num_params:2*self.num_params], dtype=float),
