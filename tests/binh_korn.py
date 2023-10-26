@@ -1,4 +1,4 @@
-from optimizer.mopso import MOPSO
+import optimizer
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -20,14 +20,16 @@ def f2(x, y):
 
 def f(params):
     return [[f1(params[i][0], params[i][1]), f2(params[i][0], params[i][1])] for i in range(len(params))]
-        
-pso = MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
+
+file_manager = optimizer.FileManager(checkpoint_dir="tmp/checkpoint", history_dir="tmp/history")
+       
+pso = optimizer.MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
             num_objectives=2, num_particles=num_agents, num_iterations=num_iterations, 
             inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1, diversity_coefficient=1.0,
-            max_iter_no_improv=None, optimization_mode='global')
+            max_iter_no_improv=None, optimization_mode='global', file_manager=file_manager)
 
 # run the optimization algorithm
-pso.optimize(history_dir='tmp/history', checkpoint_dir='tmp/checkpoint')
+pso.optimize()
 
 metrics = [pd.read_csv('tmp/history/iteration' + str(i) + '.csv', 
                        header=None, 
