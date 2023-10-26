@@ -17,12 +17,12 @@ This module contains two classes:
 Both classes are designed to be used in conjunction to perform the MOPSO optimization process and
 find the Pareto front of non-dominated solutions.
 """
-from optimizer import Optimizer
-import numpy as np
 import os
 import copy
 import json
 import random
+import numpy as np
+from optimizer import Optimizer
 
 class Particle:
     """
@@ -70,7 +70,8 @@ class Particle:
         if int(self.num_particles * diversity_coefficient) == 0:
             leader = pareto_front[0]
         else:
-            leader = random.choice(pareto_front[:int(self.num_particles * diversity_coefficient)])
+            leader = random.choice(
+                pareto_front[:int(self.num_particles * diversity_coefficient)])
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
@@ -100,7 +101,7 @@ class Particle:
         """
         self.fitness = np.array(fitness)
         self.update_best()
-        
+
     def set_state(self, velocity, position, best_position, fitness, best_fitness):
         self.velocity = velocity
         self.position = position
@@ -128,11 +129,11 @@ class Particle:
         if np.all(self.fitness < self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
-            
+
     def is_dominated(self, others):
         """
         Check if the particle is dominated by any other particle.
-        
+
         Parameters:
             others (list): List of other particles.
 
@@ -190,7 +191,8 @@ class MOPSO(Optimizer):
         global_best_position (numpy.ndarray): Global best position in the swarm.
         global_best_fitness (list): Global best fitness values achieved in the swarm.
         iteration (int): the current iteration
-        pareto_front (list): List of Particle objects representing the Pareto front of non-dominated solutions across all iterations.
+        pareto_front (list): List of Particle objects representing the Pareto front of non-dominated 
+                             solutions across all iterations.
         history (list): List to store the global best fitness values at each iteration.
 
     Methods:
@@ -216,7 +218,8 @@ class MOPSO(Optimizer):
                  checkpoint_dir=None):
         self.objective_functions = objective_functions
         if checkpoint_dir:
-            self.load_checkpoint(checkpoint_dir='checkpoint', num_additional_iterations=num_iterations)
+            self.load_checkpoint(checkpoint_dir='checkpoint',
+                                 num_additional_iterations=num_iterations)
             return
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
@@ -237,11 +240,12 @@ class MOPSO(Optimizer):
                           for _ in range(num_particles)]
         self.iteration = 0
         self.pareto_front = []
-        
+
     def save_attributes(self, checkpoint_dir):
         """
-        Save PSO attributes in a json file, which can be loaded later to continue the optimization from a checkpoint.
-        
+        Save PSO attributes in a json file, which can be loaded later to continue the optimization
+        from a checkpoint.
+
         Parameters:
             checkpoint_dir (str): Path to the folder where the json file is saved.
         """
@@ -261,34 +265,40 @@ class MOPSO(Optimizer):
         }
         with open(checkpoint_dir + '/pso_attributes.json', 'w') as f:
             json.dump(pso_attributes, f, indent=4)
-            
+
     def save_state(self, checkpoint_dir):
         """
-        Save the current state of PSO in csv files, which can be loaded later to continue the optimization from a checkpoint.
+        Save the current state of PSO in csv files, which can be loaded later to continue the 
+        optimization from a checkpoint.
         There will be 4 files:
-            - individual_states.csv: Containing the current state (position, velocity, best_position, best_fitness) 
-                                     of each particle
-            - global_states.csv: Containing the current state (global_best_position, global_best_fitness, iteration) of PSO.
+            - individual_states.csv: Containing the current state (position, velocity, 
+                                     best_position, best_fitness) of each particle
+            - global_states.csv: Containing the current state (global_best_position, 
+                                 global_best_fitness, iteration) of PSO.
             - pareto_front.csv: Containing non-dominated solutions up until this point
             - history.csv: Containing the best global fitness each iteration              
-        
+
         Parameters:
             checkpoint_dir (str): Path to the folder where the csv files are saved.
         """
-        np.savetxt(checkpoint_dir + '/individual_states.csv', 
-                   [np.concatenate([particle.position, particle.velocity, particle.best_position, np.ravel(particle.best_fitness)]) 
+        np.savetxt(checkpoint_dir + '/individual_states.csv',
+                   [np.concatenate([particle.position,
+                                    particle.velocity,
+                                    particle.best_position,
+                                    np.ravel(particle.best_fitness)])
                     for particle in self.particles],
                    fmt='%.18f',
                    delimiter=',')
-        np.savetxt(checkpoint_dir + '/pareto_front.csv', 
-                   [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.pareto_front],
+        np.savetxt(checkpoint_dir + '/pareto_front.csv',
+                   [np.concatenate([particle.position, np.ravel(particle.fitness)])
+                    for particle in self.pareto_front],
                    fmt='%.18f',
                    delimiter=',')
-        
+
     def load_checkpoint(self, checkpoint_dir, num_additional_iterations):
         """
         Load a checkpoint in order to continue a previous run.            
-        
+
         Parameters:
             checkpoint_dir (str): Path to the folder where the checkpoint is saved.
             num_additional_iterations: Number of additional iterations to run. 
@@ -296,9 +306,11 @@ class MOPSO(Optimizer):
         # load saved data
         with open(checkpoint_dir + '/pso_attributes.json') as f:
             pso_attributes = json.load(f)
-        individual_states =  np.genfromtxt(checkpoint_dir + '/individual_states.csv', delimiter=',', dtype=float)
-        pareto_front = np.genfromtxt(checkpoint_dir + '/pareto_front.csv', delimiter=',', dtype=float)
-        
+        individual_states = np.genfromtxt(
+            checkpoint_dir + '/individual_states.csv', delimiter=',', dtype=float)
+        pareto_front = np.genfromtxt(
+            checkpoint_dir + '/pareto_front.csv', delimiter=',', dtype=float)
+
         # restore pso attributes
         self.lower_bounds = pso_attributes['lower_bounds']
         self.upper_bounds = pso_attributes['upper_bounds']
@@ -313,38 +325,46 @@ class MOPSO(Optimizer):
         self.optimization_mode = pso_attributes['optimization_mode']
         self.num_iterations = num_additional_iterations
         self.iteration = pso_attributes['iteration']
-        
+
         # restore particles
         self.particles = []
         for i in range(self.num_particles):
-            particle = Particle(self.lower_bounds, self.upper_bounds, num_objectives=self.num_objectives, num_particles=self.num_particles)
+            particle = Particle(self.lower_bounds, self.upper_bounds,
+                                num_objectives=self.num_objectives,
+                                num_particles=self.num_particles)
             particle.set_state(
-                position=np.array(individual_states[i][:self.num_params], dtype=float),
-                velocity=np.array(individual_states[i][self.num_params:2*self.num_params], dtype=float),
-                best_position=np.array(individual_states[i][2*self.num_params:3*self.num_params], dtype=float),
+                position=np.array(
+                    individual_states[i][:self.num_params], dtype=float),
+                velocity=np.array(
+                    individual_states[i][self.num_params:2*self.num_params], dtype=float),
+                best_position=np.array(
+                    individual_states[i][2*self.num_params:3*self.num_params], dtype=float),
                 fitness=[np.inf] * self.num_objectives,
-                best_fitness=np.array(individual_states[i][3*self.num_params:], dtype=float)
+                best_fitness=np.array(
+                    individual_states[i][3*self.num_params:], dtype=float)
             )
             self.particles.append(particle)
-            
+
         # restore pareto front
         self.pareto_front = []
         for i in range(len(pareto_front)):
-            particle = Particle(self.lower_bounds, self.upper_bounds, num_objectives=self.num_objectives, num_particles=self.num_particles)
-            particle.set_state(position=pareto_front[i][:self.num_params], 
+            particle = Particle(self.lower_bounds, self.upper_bounds,
+                                num_objectives=self.num_objectives,
+                                num_particles=self.num_particles)
+            particle.set_state(position=pareto_front[i][:self.num_params],
                                fitness=pareto_front[i][self.num_params:],
                                velocity=None,
                                best_position=None,
-                               best_fitness=None) 
+                               best_fitness=None)
             self.pareto_front.append(particle)
- 
+
     def optimize(self, history_dir=None, checkpoint_dir=None):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions. If `history_dir` is specified, the position and fitness of all particles 
         are saved every iteration. If `checkpoint_dir` is specified, a checkpoint will be 
         saved at the end. The checkpoint can be loaded later to continue the optimization.
-        
+
         Parameters:
             history_dir (str): Path to the folder where history is saved (optional).
             checkpoint_dir (str): Path to the folder where checkpoint is saved (optional).
@@ -354,7 +374,7 @@ class MOPSO(Optimizer):
         """
         if history_dir and not os.path.exists(history_dir):
             os.mkdir(history_dir)
-            
+
         for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
                 optimization_output = [objective_function([particle.position for
@@ -367,20 +387,21 @@ class MOPSO(Optimizer):
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
             if history_dir:
-                np.savetxt(history_dir + '/iteration' + str(self.iteration) + '.csv', 
-                           [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.particles],
+                np.savetxt(history_dir + '/iteration' + str(self.iteration) + '.csv',
+                           [np.concatenate([particle.position, np.ravel(
+                               particle.fitness)]) for particle in self.particles],
                            fmt='%.18f',
                            delimiter=',')
-                
+
             self.update_pareto_front()
-               
+
             for particle in self.particles:
                 particle.update_velocity(self.pareto_front,
                                          self.inertia_weight,
                                          self.cognitive_coefficient,
                                          self.social_coefficient)
                 particle.update_position(self.lower_bounds, self.upper_bounds)
-                
+
             self.iteration += 1
 
         if checkpoint_dir:
@@ -388,19 +409,21 @@ class MOPSO(Optimizer):
                 os.mkdir(checkpoint_dir)
             self.save_attributes(checkpoint_dir)
             self.save_state(checkpoint_dir)
-            
+
         return self.pareto_front
-                
+
     def update_pareto_front(self):
         """
         Update the Pareto front of non-dominated solutions across all iterations.
         """
         particles = self.particles + self.pareto_front
-        self.pareto_front = [copy.deepcopy(particle) for particle in particles 
+        self.pareto_front = [copy.deepcopy(particle) for particle in particles
                              if not particle.is_dominated(particles)]
-        
-        crowding_distances = self.calculate_crowding_distance(self.pareto_front)
-        self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
+
+        crowding_distances = self.calculate_crowding_distance(
+            self.pareto_front)
+        self.pareto_front.sort(
+            key=lambda x: crowding_distances[x], reverse=True)
 
     def get_current_pareto_front(self):
         """
@@ -437,14 +460,15 @@ class MOPSO(Optimizer):
         """
         if len(pareto_front) == 0:
             return []
-        
+
         num_objectives = len(np.ravel(pareto_front[0].fitness))
         distances = [0] * len(pareto_front)
         point_to_distance = {}
 
         for i in range(num_objectives):
             # Sort by objective i
-            sorted_front = sorted(pareto_front, key=lambda x: np.ravel(x.fitness)[i])
+            sorted_front = sorted(
+                pareto_front, key=lambda x: np.ravel(x.fitness)[i])
 
             # Set the boundary points to infinity
             distances[0] = float('inf')
@@ -456,7 +480,8 @@ class MOPSO(Optimizer):
             norm_denom = max_obj - min_obj if max_obj != min_obj else 1
 
             for j in range(1, len(pareto_front) - 1):
-                distances[j] += (np.ravel(sorted_front[j + 1].fitness)[i] - np.ravel(sorted_front[j - 1].fitness)[i]) / norm_denom
+                distances[j] += (np.ravel(sorted_front[j + 1].fitness)[i] -
+                                 np.ravel(sorted_front[j - 1].fitness)[i]) / norm_denom
 
         for i, point in enumerate(pareto_front):
             point_to_distance[point] = distances[i]
