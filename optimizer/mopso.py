@@ -215,11 +215,11 @@ class MOPSO(Optimizer):
                  optimization_mode='individual',
                  max_iter_no_improv=None,
                  num_objectives=None,
-                 checkpoint_dir=None):
+                 file_manager=None):
+        super().__init__(file_manager)
         self.objective_functions = objective_functions
-        if checkpoint_dir:
-            self.load_checkpoint(checkpoint_dir='checkpoint',
-                                 num_additional_iterations=num_iterations)
+        if self.file_manager.loading_enabled:
+            self.load_checkpoint(checkpoint_dir=self.file_manager.checkpoint_dir, num_additional_iterations=num_iterations)
             return
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
@@ -357,8 +357,8 @@ class MOPSO(Optimizer):
                                best_position=None,
                                best_fitness=None)
             self.pareto_front.append(particle)
-
-    def optimize(self, history_dir=None, checkpoint_dir=None):
+ 
+    def optimize(self):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions. If `history_dir` is specified, the position and fitness of all particles 
@@ -372,9 +372,10 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        if history_dir and not os.path.exists(history_dir):
-            os.mkdir(history_dir)
-
+        if self.file_manager.saving_enabled:
+            if self.file_manager.history_dir and not os.path.exists(self.file_manager.history_dir):
+                os.makedirs(self.file_manager.history_dir)
+            
         for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
                 optimization_output = [objective_function([particle.position for
@@ -386,10 +387,9 @@ class MOPSO(Optimizer):
                 if self.optimization_mode == 'global':
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
-            if history_dir:
-                np.savetxt(history_dir + '/iteration' + str(self.iteration) + '.csv',
-                           [np.concatenate([particle.position, np.ravel(
-                               particle.fitness)]) for particle in self.particles],
+            if self.file_manager.saving_enabled:
+                np.savetxt(self.file_manager.history_dir + '/iteration' + str(self.iteration) + '.csv', 
+                           [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.particles],
                            fmt='%.18f',
                            delimiter=',')
 
@@ -404,12 +404,12 @@ class MOPSO(Optimizer):
 
             self.iteration += 1
 
-        if checkpoint_dir:
-            if not os.path.exists(checkpoint_dir):
-                os.mkdir(checkpoint_dir)
-            self.save_attributes(checkpoint_dir)
-            self.save_state(checkpoint_dir)
-
+        if self.file_manager.saving_enabled:
+            if not os.path.exists(self.file_manager.checkpoint_dir):
+                os.makedirs(self.file_manager.checkpoint_dir)
+            self.save_attributes(self.file_manager.checkpoint_dir)
+            self.save_state(self.file_manager.checkpoint_dir)
+            
         return self.pareto_front
 
     def update_pareto_front(self):
