@@ -24,6 +24,7 @@ import random
 import numpy as np
 from optimizer import Optimizer
 
+
 class Particle:
     """
     Represents a particle in the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
@@ -219,7 +220,8 @@ class MOPSO(Optimizer):
         super().__init__(file_manager)
         self.objective_functions = objective_functions
         if self.file_manager.loading_enabled:
-            self.load_checkpoint(checkpoint_dir=self.file_manager.checkpoint_dir, num_additional_iterations=num_iterations)
+            self.load_checkpoint(
+                checkpoint_dir=self.file_manager.checkpoint_dir, num_additional_iterations=num_iterations)
             return
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
@@ -357,7 +359,7 @@ class MOPSO(Optimizer):
                                best_position=None,
                                best_fitness=None)
             self.pareto_front.append(particle)
- 
+
     def optimize(self):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
@@ -375,7 +377,7 @@ class MOPSO(Optimizer):
         if self.file_manager.saving_enabled:
             if self.file_manager.history_dir and not os.path.exists(self.file_manager.history_dir):
                 os.makedirs(self.file_manager.history_dir)
-            
+
         for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
                 optimization_output = [objective_function([particle.position for
@@ -388,8 +390,9 @@ class MOPSO(Optimizer):
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
             if self.file_manager.saving_enabled:
-                np.savetxt(self.file_manager.history_dir + '/iteration' + str(self.iteration) + '.csv', 
-                           [np.concatenate([particle.position, np.ravel(particle.fitness)]) for particle in self.particles],
+                np.savetxt(self.file_manager.history_dir + '/iteration' + str(self.iteration) + '.csv',
+                           [np.concatenate([particle.position, np.ravel(
+                               particle.fitness)]) for particle in self.particles],
                            fmt='%.18f',
                            delimiter=',')
 
@@ -409,7 +412,7 @@ class MOPSO(Optimizer):
                 os.makedirs(self.file_manager.checkpoint_dir)
             self.save_attributes(self.file_manager.checkpoint_dir)
             self.save_state(self.file_manager.checkpoint_dir)
-            
+
         return self.pareto_front
 
     def update_pareto_front(self):
