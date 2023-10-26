@@ -36,8 +36,8 @@ def reconstrucion(particles):
   
   
 # create the PSO object
-pso = MOPSO(objective_functions=[reconstrucion],lb=lb, ub=ub, num_particles=200, num_iterations=5, w=0.5, 
-          c1=1, c2=1, max_iter_no_improv=None, optimization_mode='global')
+pso = MOPSO(objective_functions=[reconstrucion],lower_bounds=lb, upper_bounds=ub, num_particles=200, num_iterations=5, inertia_weight=0.5, 
+          social_coefficient=1, cognitive_coefficient=1, max_iter_no_improv=None, optimization_mode='global')
 
 # run the optimization algorithm
 pso.optimize()
