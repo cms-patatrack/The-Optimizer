@@ -17,6 +17,7 @@ This module contains two classes:
 Both classes are designed to be used in conjunction to perform the MOPSO optimization process and
 find the Pareto front of non-dominated solutions.
 """
+from optimizer import Optimizer
 import numpy as np
 import os
 import copy
@@ -145,7 +146,7 @@ class Particle:
         return False
 
 
-class MOPSO:
+class MOPSO(Optimizer):
     """
     Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
 
