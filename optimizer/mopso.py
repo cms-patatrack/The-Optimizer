@@ -25,9 +25,6 @@ from concurrent.futures import ProcessPoolExecutor
 import warnings
 from .termcolors import bcolors
 
-from concurrent.futures import ProcessPoolExecutor
-import warnings
-
 
 class Particle:
     """
@@ -414,7 +411,7 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        for _ in range(self.num_iterations):
+        for _ in range(num_iterations):
             with ProcessPoolExecutor(max_workers=self.num_batch) as executor:
                 futures = [executor.submit(self.process_batch, worker_id, batch)
                            for worker_id, batch in enumerate(self.particles_batch)]
@@ -451,6 +448,21 @@ class MOPSO(Optimizer):
         self.save_state()
 
         return self.pareto_front
+
+
+#    def process_batch(self, batch, optimization_output):
+#        print("Starting processing Batch")
+#        for p_id, particle in enumerate(batch):
+#            if self.optimization_mode == 'individual':
+#                particle.evaluate_fitness(self.objective_functions)
+#            if self.optimization_mode == 'global':
+#                print(optimization_output, len(optimization_output))
+#                for output in optimization_output:
+#                    print(output, len(output))
+#                particle.set_fitness([output[p_id]
+#                                     for output in optimization_output])
+#        return batch
+
 
     def update_pareto_front(self):
         """
