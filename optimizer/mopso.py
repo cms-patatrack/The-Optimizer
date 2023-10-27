@@ -24,7 +24,6 @@ from optimizer import Optimizer, FileManager
 from concurrent.futures import ProcessPoolExecutor
 import warnings
 from .termcolors import bcolors
-from optimizer import Optimizer, FileManager
 
 
 class Particle:
@@ -443,7 +442,7 @@ class MOPSO(Optimizer):
                         self.lower_bounds, self.upper_bounds)
 
             self.iteration += 1
-        self.particles = [particle for particle in batch for batch in self.particles_batch]
+
         self.save_attributes()
         self.save_state()
 
