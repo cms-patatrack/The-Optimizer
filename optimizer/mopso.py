@@ -243,7 +243,7 @@ class MOPSO(Optimizer):
             self.batch_size = len(self.particles) // self.num_batch
 
             # Check if the division leaves some elements unallocated
-            remaining_elements = len(self.particles) % self.num_batch
+            remaining_elements = len(self.particles) % self.batch_size
 
             if remaining_elements > 0:
                 # Warn the user and suggest adjusting the number of particles or batches
@@ -392,7 +392,7 @@ class MOPSO(Optimizer):
             self.batch_size = len(self.particles) // self.num_batch
 
             # Check if the division leaves some elements unallocated
-            remaining_elements = len(self.particles) % self.num_batch
+            remaining_elements = len(self.particles) % self.batch_size
 
             if remaining_elements > 0:
                 # Warn the user and suggest adjusting the number of particles or batches
@@ -444,8 +444,6 @@ class MOPSO(Optimizer):
             with ProcessPoolExecutor(max_workers=self.num_batch) as executor:
                 futures = [executor.submit(
                     self.process_batch, worker_id,  batch, self.objective_functions) for worker_id, batch in enumerate(self.particles_batch)]
-            #     futures = [executor.submit(self.process_batch, batch, optimization_output)
-            #                for batch, optimization_output in zip(self.particles_batch, optimization_output)]
 
             new_batches = []
             for future in futures:
@@ -474,21 +472,6 @@ class MOPSO(Optimizer):
         self.save_state()
 
         return self.pareto_front
-
-
-#    def process_batch(self, batch, optimization_output):
-#        print("Starting processing Batch")
-#        for p_id, particle in enumerate(batch):
-#            if self.optimization_mode == 'individual':
-#                particle.evaluate_fitness(self.objective_functions)
-#            if self.optimization_mode == 'global':
-#                print(optimization_output, len(optimization_output))
-#                for output in optimization_output:
-#                    print(output, len(output))
-#                particle.set_fitness([output[p_id]
-#                                     for output in optimization_output])
-#        return batch
-
 
     def update_pareto_front(self):
         """
