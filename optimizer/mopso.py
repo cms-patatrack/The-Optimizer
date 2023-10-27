@@ -25,6 +25,9 @@ from concurrent.futures import ProcessPoolExecutor
 import warnings
 from .termcolors import bcolors
 
+from concurrent.futures import ProcessPoolExecutor
+import warnings
+
 
 class Particle:
     """

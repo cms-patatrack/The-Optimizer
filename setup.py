@@ -6,4 +6,3 @@ setup(
     packages=find_packages(include=['optimizer', 'optimizer.*']),
 	install_requires=['scikit-learn','numpy','matplotlib','pandas']
 )
-
