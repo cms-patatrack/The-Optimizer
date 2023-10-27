@@ -24,7 +24,6 @@ from optimizer import Optimizer, FileManager
 from concurrent.futures import ProcessPoolExecutor
 import warnings
 from .termcolors import bcolors
-from optimizer import Optimizer, FileManager
 
 
 class Particle:
@@ -249,7 +248,7 @@ class MOPSO(Optimizer):
             if remaining_elements > 0:
                 # Warn the user and suggest adjusting the number of particles or batches
                 warning_message = (
-                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.ENDC} "
+                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.ENDC}"
                 )
                 warnings.warn(warning_message)
 
@@ -383,42 +382,14 @@ class MOPSO(Optimizer):
                                best_fitness=None)
             self.pareto_front.append(particle)
 
-        # restor batches
-        self.particles_batch = []
-        if (num_batch == 1):
-            self.particles_batch.append(self.particles)
-            self.batch_size = len(self.particles)
-        else:
-            # Calculate the approximate batch size
-            self.batch_size = len(self.particles) // self.num_batch
-
-            # Check if the division leaves some elements unallocated
-            remaining_elements = len(self.particles) % self.batch_size
-
-            if remaining_elements > 0:
-                # Warn the user and suggest adjusting the number of particles or batches
-                warning_message = (
-                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.END} "
-                )
-                warnings.warn(warning_message)
-
-            # Use list comprehension to create batches
-            self.particles_batch = [self.particles[i:i + self.batch_size]
-                                    for i in range(0, len(self.particles), self.batch_size)]
-
-            # If the division leaves some elements unallocated, add them to the last batch
-            if remaining_elements > 0:
-                last_batch = self.particles_batch.pop()
-                last_batch.extend(input_list[len(self.particles_batch) * self.batch_size:])
-                self.particles_batch.append(last_batch)
-
-    def process_batch(self, worker_id, batch, objective_functions):
+    def process_batch(self, worker_id, batch):
         # Launch a program for this batch using objective_function
         print(f"Worker ID {worker_id}")
-        for objective_function in objective_functions:
-            optimization_output = objective_function([particle.position for particle in batch], worker_id)
-        for p_id, output in enumerate(optimization_output):
-            particle = batch[p_id]
+        params = [particle.position for particle in batch]
+            
+        optimization_output = self.objective.evaluate(params, worker_id )
+        for p_id, output in enumerate(optimization_output[0]):
+            particle = batch[p_id]  
             if self.optimization_mode == 'individual':
                 particle.evaluate_fitness(self.objective_functions)
             if self.optimization_mode == 'global':
@@ -440,18 +411,21 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-
-        for it in range(self.num_iterations):
-            print(f"Start itration {it}")
+        for _ in range(self.num_iterations):
             with ProcessPoolExecutor(max_workers=self.num_batch) as executor:
-                futures = [executor.submit(
-                    self.process_batch, worker_id,  batch, self.objective_functions) for worker_id, batch in enumerate(self.particles_batch)]
+                futures = [executor.submit(self.process_batch, worker_id, batch)
+                           for worker_id, batch in enumerate(self.particles_batch)]
 
             new_batches = []
             for future in futures:
                 batch = future.result()
                 new_batches.append(batch)
             self.particles_batch = new_batches
+            save_particles = np.array([])
+            for batch in self.particles_batch:
+                for particle in batch:
+                    l = np.concatenate([particle.position, np.ravel(particle.fitness)])
+                    save_particles = np.append(save_particles, l)
 
             FileManager.save_csv([np.concatenate([particle.position, np.ravel(
                                  particle.fitness)]) for batch in self.particles_batch for particle in batches],
@@ -469,7 +443,7 @@ class MOPSO(Optimizer):
                         self.lower_bounds, self.upper_bounds)
 
             self.iteration += 1
-        self.particles = [particle for particle in batch for batch in self.particles_batch]
+
         self.save_attributes()
         self.save_state()
 
