@@ -314,11 +314,11 @@ class MOPSO(Optimizer):
                                               particle.velocity,
                                               particle.best_position,
                                               np.ravel(particle.best_fitness)])
-                             for particle in batch for batch in self.particles_batch],
+                             for batch in self.particles_batch for particle in batch],
                              'checkpoint/individual_states.csv')
 
         FileManager.save_csv([np.concatenate([particle.position, np.ravel(particle.fitness)])
-                             for particle in batch for batch in self.particles_batch],
+                             for batch in self.particles_batch for particle in batch],
                              'checkpoint/pareto_front.csv')
 
     def load_checkpoint(self):
@@ -429,7 +429,7 @@ class MOPSO(Optimizer):
 
         for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
-            optimization_output = [objective_function([particle.position for particle in batch])
+                optimization_output = [objective_function([particle.position for particle in batch])
                                    for objective_function in self.objective_functions
                                    for batch in self.particles_batch]
             with ProcessPoolExecutor(max_workers=self.num_batch) as executor:
