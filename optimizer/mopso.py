@@ -386,7 +386,6 @@ class MOPSO(Optimizer):
         # Launch a program for this batch using objective_function
         print(f"Worker ID {worker_id}")
         params = [particle.position for particle in batch]
-            
         optimization_output = self.objective.evaluate(params, worker_id )
         for p_id, output in enumerate(optimization_output[0]):
             particle = batch[p_id]  
@@ -448,21 +447,6 @@ class MOPSO(Optimizer):
         self.save_state()
 
         return self.pareto_front
-
-
-#    def process_batch(self, batch, optimization_output):
-#        print("Starting processing Batch")
-#        for p_id, particle in enumerate(batch):
-#            if self.optimization_mode == 'individual':
-#                particle.evaluate_fitness(self.objective_functions)
-#            if self.optimization_mode == 'global':
-#                print(optimization_output, len(optimization_output))
-#                for output in optimization_output:
-#                    print(output, len(output))
-#                particle.set_fitness([output[p_id]
-#                                     for output in optimization_output])
-#        return batch
-
 
     def update_pareto_front(self):
         """
