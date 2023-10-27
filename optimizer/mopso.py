@@ -23,6 +23,7 @@ import numpy as np
 from optimizer import Optimizer, FileManager
 from concurrent.futures import ProcessPoolExecutor
 import warnings
+from .termcolors import bcolors
 
 
 class Particle:
@@ -242,13 +243,12 @@ class MOPSO(Optimizer):
             self.batch_size = len(self.particles) // self.num_batch
 
             # Check if the division leaves some elements unallocated
-            remaining_elements = len(input_list) % self.num_batch
+            remaining_elements = len(self.particles) % self.num_batch
 
             if remaining_elements > 0:
                 # Warn the user and suggest adjusting the number of particles or batches
                 warning_message = (
-                    f"The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(input_list)}). "
-                    f"Consider incrementing the number of particles by a multiple of {remaining_elements} or decreasing the number of batches."
+                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.ENDC} "
                 )
                 warnings.warn(warning_message)
 
@@ -259,7 +259,7 @@ class MOPSO(Optimizer):
             # If the division leaves some elements unallocated, add them to the last batch
             if remaining_elements > 0:
                 last_batch = self.particles_batch.pop()
-                last_batch.extend(input_list[len(batches) * self.batch_size:])
+                last_batch.extend(self.particles[len(self.particles_batch) * self.batch_size:])
                 self.particles_batch.append(last_batch)
 
         self.iteration = 0
@@ -286,7 +286,7 @@ class MOPSO(Optimizer):
             'upper_bounds': self.upper_bounds,
             'num_particles': self.num_particles,
             'num_params': self.num_params,
-            'num_batch': slef.num_batch,
+            'num_batch': self.num_batch,
             'inertia_weight': self.inertia_weight,
             'cognitive_coefficient': self.cognitive_coefficient,
             'social_coefficient': self.social_coefficient,
@@ -392,13 +392,12 @@ class MOPSO(Optimizer):
             self.batch_size = len(self.particles) // self.num_batch
 
             # Check if the division leaves some elements unallocated
-            remaining_elements = len(input_list) % self.num_batch
+            remaining_elements = len(self.particles) % self.num_batch
 
             if remaining_elements > 0:
                 # Warn the user and suggest adjusting the number of particles or batches
                 warning_message = (
-                    f"The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(input_list)}). "
-                    f"Consider incrementing the number of particles by a multiple of {remaining_elements} or decreasing the number of batches."
+                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.END} "
                 )
                 warnings.warn(warning_message)
 
@@ -409,10 +408,23 @@ class MOPSO(Optimizer):
             # If the division leaves some elements unallocated, add them to the last batch
             if remaining_elements > 0:
                 last_batch = self.particles_batch.pop()
-                last_batch.extend(input_list[len(batches) * self.batch_size:])
+                last_batch.extend(input_list[len(self.particles_batch) * self.batch_size:])
                 self.particles_batch.append(last_batch)
 
-    def optimize(self, history_dir=None, checkpoint_dir=None):
+    def process_batch(self, worker_id, batch, objective_functions):
+        # Launch a program for this batch using objective_function
+        print(f"Worker ID {worker_id}")
+        for objective_function in objective_functions:
+            optimization_output = objective_function([particle.position for particle in batch], worker_id)
+        for p_id, output in enumerate(optimization_output):
+            particle = batch[p_id]
+            if self.optimization_mode == 'individual':
+                particle.evaluate_fitness(self.objective_functions)
+            if self.optimization_mode == 'global':
+                particle.set_fitness(output)
+        return batch
+
+    def optimize(self, num_iterations = 100, max_iter_no_improv = None): 
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions. If `history_dir` is specified, the position and fitness of all particles 
@@ -427,14 +439,13 @@ class MOPSO(Optimizer):
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
 
-        for _ in range(self.num_iterations):
-            if self.optimization_mode == 'global':
-                optimization_output = [objective_function([particle.position for particle in batch])
-                                   for objective_function in self.objective_functions
-                                   for batch in self.particles_batch]
+        for it in range(self.num_iterations):
+            print(f"Start itration {it}")
             with ProcessPoolExecutor(max_workers=self.num_batch) as executor:
-                futures = [executor.submit(self.process_batch, batch, optimization_output)
-                           for batch, optimization_output in zip(self.particlesBatches, optimization_output)]
+                futures = [executor.submit(
+                    self.process_batch, worker_id,  batch, self.objective_functions) for worker_id, batch in enumerate(self.particles_batch)]
+            #     futures = [executor.submit(self.process_batch, batch, optimization_output)
+            #                for batch, optimization_output in zip(self.particles_batch, optimization_output)]
 
             new_batches = []
             for future in futures:
@@ -464,6 +475,21 @@ class MOPSO(Optimizer):
 
         return self.pareto_front
 
+
+#    def process_batch(self, batch, optimization_output):
+#        print("Starting processing Batch")
+#        for p_id, particle in enumerate(batch):
+#            if self.optimization_mode == 'individual':
+#                particle.evaluate_fitness(self.objective_functions)
+#            if self.optimization_mode == 'global':
+#                print(optimization_output, len(optimization_output))
+#                for output in optimization_output:
+#                    print(output, len(output))
+#                particle.set_fitness([output[p_id]
+#                                     for output in optimization_output])
+#        return batch
+
+
     def update_pareto_front(self):
         """
         Update the Pareto front of non-dominated solutions across all iterations.
@@ -491,9 +517,9 @@ class MOPSO(Optimizer):
         all_particles = [
             particle for batch in self.particles_batch for particle in batch]
         pareto_front = []
-        for particle in all_particles: 
+        for particle in all_particles:
             dominated = False
-            for other_particle in all_particles: 
+            for other_particle in all_particles:
                 if np.all(particle.fitness >= other_particle.fitness) and \
                    np.any(particle.fitness > other_particle.fitness):
                     dominated = True
