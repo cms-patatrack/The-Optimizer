@@ -17,9 +17,7 @@ This module contains two classes:
 Both classes are designed to be used in conjunction to perform the MOPSO optimization process and
 find the Pareto front of non-dominated solutions.
 """
-import os
 import copy
-import json
 import random
 import numpy as np
 from optimizer import Optimizer, FileManager
@@ -218,9 +216,12 @@ class MOPSO(Optimizer):
                  num_objectives=None):
         self.objective_functions = objective_functions
         if FileManager.loading_enabled:
-            self.load_checkpoint(
-                checkpoint_dir=FileManager.checkpoint_dir, num_additional_iterations=num_iterations)
-            return
+            try:
+                self.load_checkpoint(num_additional_iterations=num_iterations) 
+                return
+            except FileNotFoundError as e:
+                print("Checkpoint not found. Fallback to standard construction.")
+                
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
         else:
@@ -241,7 +242,7 @@ class MOPSO(Optimizer):
         self.iteration = 0
         self.pareto_front = []
 
-    def save_attributes(self, checkpoint_dir):
+    def save_attributes(self):
         """
         Save PSO attributes in a json file, which can be loaded later to continue the optimization
         from a checkpoint.
@@ -263,10 +264,9 @@ class MOPSO(Optimizer):
             'optimization_mode': self.optimization_mode,
             'iteration': self.iteration
         }
-        with open(checkpoint_dir + '/pso_attributes.json', 'w') as f:
-            json.dump(pso_attributes, f, indent=4)
+        FileManager.save_json(pso_attributes, "checkpoint/pso_attributes.json")
 
-    def save_state(self, checkpoint_dir):
+    def save_state(self):
         """
         Save the current state of PSO in csv files, which can be loaded later to continue the 
         optimization from a checkpoint.
@@ -281,21 +281,18 @@ class MOPSO(Optimizer):
         Parameters:
             checkpoint_dir (str): Path to the folder where the csv files are saved.
         """
-        np.savetxt(checkpoint_dir + '/individual_states.csv',
-                   [np.concatenate([particle.position,
+        FileManager.save_csv([np.concatenate([particle.position,
                                     particle.velocity,
                                     particle.best_position,
                                     np.ravel(particle.best_fitness)])
-                    for particle in self.particles],
-                   fmt='%.18f',
-                   delimiter=',')
-        np.savetxt(checkpoint_dir + '/pareto_front.csv',
-                   [np.concatenate([particle.position, np.ravel(particle.fitness)])
-                    for particle in self.pareto_front],
-                   fmt='%.18f',
-                   delimiter=',')
+                             for particle in self.particles],
+                             'checkpoint/individual_states.csv')
 
-    def load_checkpoint(self, checkpoint_dir, num_additional_iterations):
+        FileManager.save_csv([np.concatenate([particle.position, np.ravel(particle.fitness)])
+                             for particle in self.pareto_front],
+                             'checkpoint/pareto_front.csv')
+
+    def load_checkpoint(self, num_additional_iterations):
         """
         Load a checkpoint in order to continue a previous run.            
 
@@ -304,12 +301,9 @@ class MOPSO(Optimizer):
             num_additional_iterations: Number of additional iterations to run. 
         """
         # load saved data
-        with open(checkpoint_dir + '/pso_attributes.json') as f:
-            pso_attributes = json.load(f)
-        individual_states = np.genfromtxt(
-            checkpoint_dir + '/individual_states.csv', delimiter=',', dtype=float)
-        pareto_front = np.genfromtxt(
-            checkpoint_dir + '/pareto_front.csv', delimiter=',', dtype=float)
+        pso_attributes = FileManager.load_json('checkpoint/pso_attributes.json')
+        individual_states = FileManager.load_csv('checkpoint/individual_states.csv')
+        pareto_front = FileManager.load_csv('checkpoint/pareto_front.csv')
 
         # restore pso attributes
         self.lower_bounds = pso_attributes['lower_bounds']
@@ -372,10 +366,6 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        if FileManager.saving_enabled:
-            if FileManager.history_dir and not os.path.exists(FileManager.history_dir):
-                os.makedirs(FileManager.history_dir)
-
         for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
                 optimization_output = [objective_function([particle.position for
@@ -387,12 +377,9 @@ class MOPSO(Optimizer):
                 if self.optimization_mode == 'global':
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
-            if FileManager.saving_enabled:
-                np.savetxt(FileManager.history_dir + '/iteration' + str(self.iteration) + '.csv',
-                           [np.concatenate([particle.position, np.ravel(
-                               particle.fitness)]) for particle in self.particles],
-                           fmt='%.18f',
-                           delimiter=',')
+            FileManager.save_csv([np.concatenate([particle.position, np.ravel(
+                                 particle.fitness)]) for particle in self.particles],
+                                 'history/iteration' + str(self.iteration) + '.csv')
 
             self.update_pareto_front()
 
@@ -405,11 +392,8 @@ class MOPSO(Optimizer):
 
             self.iteration += 1
 
-        if FileManager.saving_enabled:
-            if not os.path.exists(FileManager.checkpoint_dir):
-                os.makedirs(FileManager.checkpoint_dir)
-            self.save_attributes(FileManager.checkpoint_dir)
-            self.save_state(FileManager.checkpoint_dir)
+        self.save_attributes()
+        self.save_state()
 
         return self.pareto_front
 
