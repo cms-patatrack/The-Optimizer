@@ -9,7 +9,7 @@ lb = [-10.0]
 ub = [10.0]
 
 num_agents = 100
-num_iterations = 20
+num_iterations = 10
 num_params = 1
 
 def f1(x):
@@ -21,8 +21,8 @@ def f2(x):
 def f(params):
     return [[f1(params[i][0]), f2(params[i][0])] for i in range(len(params))]
 
-optimizer.FileManager.checkpoint_dir="tmp/schaffer/checkpoint"
-optimizer.FileManager.history_dir="tmp/schaffer/history"
+optimizer.FileManager.working_dir="tmp/schaffer/"
+optimizer.FileManager.loading_enabled = True
 
 pso = optimizer.MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
             num_objectives=2, num_particles=num_agents, num_iterations=num_iterations, 

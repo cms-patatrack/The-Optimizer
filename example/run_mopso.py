@@ -22,7 +22,7 @@ if __name__ == "__main__":
   # create the PSO object
   pso = optimizer.MOPSO(objective_functions=[objective_function_1, objective_function_2], 
             lower_bounds=lb, upper_bounds=ub, num_particles=100, num_iterations=20, inertia_weight=0.9, 
-            cognitive_coefficient=2, social_coefficient=2, max_iter_no_improv=5, file_manager=file_manager)
+            cognitive_coefficient=2, social_coefficient=2, max_iter_no_improv=5)
 
   # run the optimization algorithm
   pareto_front = pso.optimize()
