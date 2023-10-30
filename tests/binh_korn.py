@@ -21,12 +21,13 @@ def f2(x, y):
 def f(params):
     return [[f1(params[i][0], params[i][1]), f2(params[i][0], params[i][1])] for i in range(len(params))]
 
-file_manager = optimizer.FileManager(checkpoint_dir="tmp/checkpoint", history_dir="tmp/history")
+optimizer.FileManager.checkpoint_dir="tmp/schaffer/checkpoint"
+optimizer.FileManager.history_dir="tmp/schaffer/history"
        
 pso = optimizer.MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
             num_objectives=2, num_particles=num_agents, num_iterations=num_iterations, 
             inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1, diversity_coefficient=1.0,
-            max_iter_no_improv=None, optimization_mode='global', file_manager=file_manager)
+            max_iter_no_improv=None, optimization_mode='global')
 
 # run the optimization algorithm
 pso.optimize()

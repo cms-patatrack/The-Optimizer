@@ -22,7 +22,7 @@ import copy
 import json
 import random
 import numpy as np
-from optimizer import Optimizer
+from optimizer import Optimizer, FileManager
 
 
 class Particle:
@@ -215,13 +215,11 @@ class MOPSO(Optimizer):
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
-                 num_objectives=None,
-                 file_manager=None):
-        super().__init__(file_manager)
+                 num_objectives=None):
         self.objective_functions = objective_functions
-        if self.file_manager.loading_enabled:
+        if FileManager.loading_enabled:
             self.load_checkpoint(
-                checkpoint_dir=self.file_manager.checkpoint_dir, num_additional_iterations=num_iterations)
+                checkpoint_dir=FileManager.checkpoint_dir, num_additional_iterations=num_iterations)
             return
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
@@ -374,9 +372,9 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        if self.file_manager.saving_enabled:
-            if self.file_manager.history_dir and not os.path.exists(self.file_manager.history_dir):
-                os.makedirs(self.file_manager.history_dir)
+        if FileManager.saving_enabled:
+            if FileManager.history_dir and not os.path.exists(FileManager.history_dir):
+                os.makedirs(FileManager.history_dir)
 
         for _ in range(self.num_iterations):
             if self.optimization_mode == 'global':
@@ -389,8 +387,8 @@ class MOPSO(Optimizer):
                 if self.optimization_mode == 'global':
                     particle.set_fitness([output[p_id]
                                          for output in optimization_output])
-            if self.file_manager.saving_enabled:
-                np.savetxt(self.file_manager.history_dir + '/iteration' + str(self.iteration) + '.csv',
+            if FileManager.saving_enabled:
+                np.savetxt(FileManager.history_dir + '/iteration' + str(self.iteration) + '.csv',
                            [np.concatenate([particle.position, np.ravel(
                                particle.fitness)]) for particle in self.particles],
                            fmt='%.18f',
@@ -407,11 +405,11 @@ class MOPSO(Optimizer):
 
             self.iteration += 1
 
-        if self.file_manager.saving_enabled:
-            if not os.path.exists(self.file_manager.checkpoint_dir):
-                os.makedirs(self.file_manager.checkpoint_dir)
-            self.save_attributes(self.file_manager.checkpoint_dir)
-            self.save_state(self.file_manager.checkpoint_dir)
+        if FileManager.saving_enabled:
+            if not os.path.exists(FileManager.checkpoint_dir):
+                os.makedirs(FileManager.checkpoint_dir)
+            self.save_attributes(FileManager.checkpoint_dir)
+            self.save_state(FileManager.checkpoint_dir)
 
         return self.pareto_front
 

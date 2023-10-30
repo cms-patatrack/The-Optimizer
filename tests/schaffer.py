@@ -21,17 +21,18 @@ def f2(x):
 def f(params):
     return [[f1(params[i][0]), f2(params[i][0])] for i in range(len(params))]
 
-file_manager = optimizer.FileManager(checkpoint_dir="tmp/checkpoint", history_dir="tmp/history")
+optimizer.FileManager.checkpoint_dir="tmp/schaffer/checkpoint"
+optimizer.FileManager.history_dir="tmp/schaffer/history"
 
 pso = optimizer.MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
             num_objectives=2, num_particles=num_agents, num_iterations=num_iterations, 
             inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1, 
-            max_iter_no_improv=None, optimization_mode='global', file_manager=file_manager)
+            max_iter_no_improv=None, optimization_mode='global')
 
 # run the optimization algorithm
 pso.optimize()
 
-metrics = [pd.read_csv('tmp/history/iteration' + str(i) + '.csv', 
+metrics = [pd.read_csv('tmp/schaffer/history/iteration' + str(i) + '.csv', 
                        header=None, 
                        usecols=[num_params, num_params + 1]).transpose().to_numpy()
            for i in range(num_iterations)]
@@ -48,5 +49,5 @@ def animate(i):
     ax.set_title(str(i))
 
 ani=animation.FuncAnimation(fig, animate, interval=200, frames=range(num_iterations))
-ani.save('tmp/checkpoint/metrics.gif', writer='pillow')
+ani.save('tmp/schaffer/checkpoint/metrics.gif', writer='pillow')
 

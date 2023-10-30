@@ -18,7 +18,7 @@ if __name__ == "__main__":
   lb = [-10,-10] #!!!
   ub = [10,10] #!!!
 
-  file_manager = optimizer.FileManager(saving_enabled=False)
+  optimizer.FileManager.saving_enabled=False
   # create the PSO object
   pso = optimizer.MOPSO(objective_functions=[objective_function_1, objective_function_2], 
             lower_bounds=lb, upper_bounds=ub, num_particles=100, num_iterations=20, inertia_weight=0.9, 
