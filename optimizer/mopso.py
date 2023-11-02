@@ -207,7 +207,8 @@ class MOPSO(Optimizer):
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
-                 num_objectives=None):
+                 num_objectives=None,
+                 incremental_pareto=False):
         self.objective_functions = objective_functions
         if FileManager.loading_enabled:
             try:
@@ -233,6 +234,7 @@ class MOPSO(Optimizer):
         self.particles = [Particle(lower_bounds, upper_bounds, num_objectives, num_particles)
                           for _ in range(num_particles)]
         self.iteration = 0
+        self.incremental_pareto = incremental_pareto
         self.pareto_front = []
 
     def save_attributes(self):
@@ -254,6 +256,7 @@ class MOPSO(Optimizer):
             'social_coefficient': self.social_coefficient,
             'max_iter_no_improv': self.max_iter_no_improv,
             'optimization_mode': self.optimization_mode,
+            'incremental_pareto': self.incremental_pareto,
             'iteration': self.iteration
         }
         FileManager.save_json(pso_attributes, "checkpoint/pso_attributes.json")
@@ -310,6 +313,7 @@ class MOPSO(Optimizer):
         self.social_coefficient = pso_attributes['social_coefficient']
         self.max_iter_no_improv = pso_attributes['max_iter_no_improv']
         self.optimization_mode = pso_attributes['optimization_mode']
+        self.incremental_pareto = pso_attributes['incremental_pareto']
         self.num_iterations = num_additional_iterations
         self.iteration = pso_attributes['iteration']
 
@@ -394,7 +398,10 @@ class MOPSO(Optimizer):
         """
         Update the Pareto front of non-dominated solutions across all iterations.
         """
-        particles = self.particles + self.pareto_front
+        particles=self.particles
+        if self.incremental_pareto:
+            particles = particles + self.pareto_front
+        
         self.pareto_front = [copy.deepcopy(particle) for particle in particles
                              if not particle.is_dominated(particles)]
 
