@@ -422,6 +422,7 @@ class MOPSO(Optimizer):
                 particle.evaluate_fitness(self.objective_functions)
             if self.optimization_mode == 'global':
                 particle.set_fitness(output)
+            batch[p_id] = particle
         return batch
 
     def optimize(self, num_iterations = 100, max_iter_no_improv = None): 
