@@ -1,5 +1,8 @@
+import numpy as np
+
 class Objective():
-    def __init__(self, function_list, num_objectives = None) -> None:
+    def __init__(self, objective_functions, num_objectives = None) -> None:
+        self.objective_functions = objective_functions
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
         else:
