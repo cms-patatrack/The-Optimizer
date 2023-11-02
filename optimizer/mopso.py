@@ -448,7 +448,7 @@ class MOPSO(Optimizer):
                         self.lower_bounds, self.upper_bounds)
 
             self.iteration += 1
-
+        self.particles = [particle for particle in batch for batch in self.particles_batch]
         self.save_attributes()
         self.save_state()
 
