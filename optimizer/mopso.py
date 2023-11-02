@@ -52,8 +52,7 @@ class Particle:
 
     def update_velocity(self,
                         pareto_front, inertia_weight=0.5,
-                        cognitive_coefficient=1, social_coefficient=1,
-                        diversity_coefficient=0.2):
+                        cognitive_coefficient=1, social_coefficient=1,):
         """
         Update the particle's velocity based on its best position and the global best position.
 
@@ -66,11 +65,7 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
-        if int(self.num_particles * diversity_coefficient) == 0:
-            leader = pareto_front[0]
-        else:
-            leader = random.choice(
-                pareto_front[:int(self.num_particles * diversity_coefficient)])
+        leader = random.choice(pareto_front[:int(self.num_particles)])
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
@@ -209,7 +204,6 @@ class MOPSO(Optimizer):
     def __init__(self, objective_functions,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 diversity_coefficient=0.2,
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
@@ -217,11 +211,11 @@ class MOPSO(Optimizer):
         self.objective_functions = objective_functions
         if FileManager.loading_enabled:
             try:
-                self.load_checkpoint(num_additional_iterations=num_iterations) 
+                self.load_checkpoint(num_additional_iterations=num_iterations)
                 return
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
-                
+
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
         else:
@@ -233,7 +227,6 @@ class MOPSO(Optimizer):
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
-        self.diversity_coefficient = diversity_coefficient
         self.num_iterations = num_iterations
         self.max_iter_no_improv = max_iter_no_improv
         self.optimization_mode = optimization_mode
@@ -259,7 +252,6 @@ class MOPSO(Optimizer):
             'inertia_weight': self.inertia_weight,
             'cognitive_coefficient': self.cognitive_coefficient,
             'social_coefficient': self.social_coefficient,
-            'diversity_coefficient': self.diversity_coefficient,
             'max_iter_no_improv': self.max_iter_no_improv,
             'optimization_mode': self.optimization_mode,
             'iteration': self.iteration
@@ -282,9 +274,9 @@ class MOPSO(Optimizer):
             checkpoint_dir (str): Path to the folder where the csv files are saved.
         """
         FileManager.save_csv([np.concatenate([particle.position,
-                                    particle.velocity,
-                                    particle.best_position,
-                                    np.ravel(particle.best_fitness)])
+                                              particle.velocity,
+                                              particle.best_position,
+                                              np.ravel(particle.best_fitness)])
                              for particle in self.particles],
                              'checkpoint/individual_states.csv')
 
@@ -301,8 +293,10 @@ class MOPSO(Optimizer):
             num_additional_iterations: Number of additional iterations to run. 
         """
         # load saved data
-        pso_attributes = FileManager.load_json('checkpoint/pso_attributes.json')
-        individual_states = FileManager.load_csv('checkpoint/individual_states.csv')
+        pso_attributes = FileManager.load_json(
+            'checkpoint/pso_attributes.json')
+        individual_states = FileManager.load_csv(
+            'checkpoint/individual_states.csv')
         pareto_front = FileManager.load_csv('checkpoint/pareto_front.csv')
 
         # restore pso attributes
@@ -314,7 +308,6 @@ class MOPSO(Optimizer):
         self.inertia_weight = pso_attributes['inertia_weight']
         self.cognitive_coefficient = pso_attributes['cognitive_coefficient']
         self.social_coefficient = pso_attributes['social_coefficient']
-        self.diversity_coefficient = pso_attributes['diversity_coefficient']
         self.max_iter_no_improv = pso_attributes['max_iter_no_improv']
         self.optimization_mode = pso_attributes['optimization_mode']
         self.num_iterations = num_additional_iterations
