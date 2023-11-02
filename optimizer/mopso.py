@@ -209,11 +209,6 @@ class MOPSO(Optimizer):
                 return
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
-
-        if num_objectives is None:
-            self.num_objectives = len(self.objective_functions)
-        else:
-            self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.num_batch = num_batch
         self.num_params = len(lower_bounds)
