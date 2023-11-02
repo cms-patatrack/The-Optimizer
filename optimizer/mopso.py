@@ -201,26 +201,21 @@ class MOPSO(Optimizer):
             Calculate the crowding distance for particles in the Pareto front.
     """
 
-    def __init__(self, objective_functions,
+    def __init__(self,
+                 objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
-                 num_objectives=None,
                  incremental_pareto=False):
-        self.objective_functions = objective_functions
+        self.objective = objective.function_list
         if FileManager.loading_enabled:
             try:
                 self.load_checkpoint(num_additional_iterations=num_iterations)
                 return
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
-
-        if num_objectives is None:
-            self.num_objectives = len(self.objective_functions)
-        else:
-            self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.num_params = len(lower_bounds)
         self.lower_bounds = lower_bounds
@@ -231,7 +226,7 @@ class MOPSO(Optimizer):
         self.num_iterations = num_iterations
         self.max_iter_no_improv = max_iter_no_improv
         self.optimization_mode = optimization_mode
-        self.particles = [Particle(lower_bounds, upper_bounds, num_objectives, num_particles)
+        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
                           for _ in range(num_particles)]
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
@@ -248,7 +243,6 @@ class MOPSO(Optimizer):
         pso_attributes = {
             'lower_bounds': self.lower_bounds,
             'upper_bounds': self.upper_bounds,
-            'num_objectives': self.num_objectives,
             'num_particles': self.num_particles,
             'num_params': self.num_params,
             'inertia_weight': self.inertia_weight,
@@ -305,7 +299,6 @@ class MOPSO(Optimizer):
         # restore pso attributes
         self.lower_bounds = pso_attributes['lower_bounds']
         self.upper_bounds = pso_attributes['upper_bounds']
-        self.num_objectives = pso_attributes['num_objectives']
         self.num_particles = pso_attributes['num_particles']
         self.num_params = pso_attributes['num_params']
         self.inertia_weight = pso_attributes['inertia_weight']
@@ -364,16 +357,16 @@ class MOPSO(Optimizer):
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
         for _ in range(self.num_iterations):
-            if self.optimization_mode == 'global':
-                optimization_output = [objective_function([particle.position for
+            if self.optimization.type == 'Objective':
+                optimization_output = np.array([objective_function([particle.position for
                                                            particle in self.particles])
-                                       for objective_function in self.objective_functions]
-            for p_id, particle in enumerate(self.particles):
-                if self.optimization_mode == 'individual':
-                    particle.evaluate_fitness(self.objective_functions)
-                if self.optimization_mode == 'global':
-                    particle.set_fitness([output[p_id]
-                                         for output in optimization_output])
+                                       for objective_function in self.objective.function_list])
+                [particle.set_fitness(optimization_output[:,p_id]) for p_id, particle in enumerate(self.particles)]
+
+            if self.optimization.type == 'ElementWiseObjective':
+                optimization_output = np.array([[obj_func(particle.position) for particle in self.particles] for obj_func in self.objective.function_list])
+                [particle.set_fitness(optimization_output[:,p_id]) for p_id, particle in enumerate(self.particles)]
+                
             FileManager.save_csv([np.concatenate([particle.position, np.ravel(
                                  particle.fitness)]) for particle in self.particles],
                                  'history/iteration' + str(self.iteration) + '.csv')
