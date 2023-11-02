@@ -336,8 +336,10 @@ class MOPSO(Optimizer):
             num_additional_iterations: Number of additional iterations to run. 
         """
         # load saved data
-        pso_attributes = FileManager.load_json('checkpoint/pso_attributes.json')
-        individual_states = FileManager.load_csv('checkpoint/individual_states.csv')
+        pso_attributes = FileManager.load_json(
+            'checkpoint/pso_attributes.json')
+        individual_states = FileManager.load_csv(
+            'checkpoint/individual_states.csv')
         pareto_front = FileManager.load_csv('checkpoint/pareto_front.csv')
 
         # restore pso attributes
