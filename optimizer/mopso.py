@@ -24,6 +24,7 @@ from optimizer import Optimizer, FileManager
 from concurrent.futures import ProcessPoolExecutor
 import warnings
 from .termcolors import bcolors
+from optimizer import Optimizer, FileManager
 
 
 class Particle:
