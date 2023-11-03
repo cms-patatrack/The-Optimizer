@@ -24,6 +24,7 @@ from optimizer import Optimizer, FileManager
 from concurrent.futures import ProcessPoolExecutor
 import warnings
 from .termcolors import bcolors
+from optimizer import Optimizer, FileManager
 
 
 class Particle:
@@ -208,6 +209,11 @@ class MOPSO(Optimizer):
                 return
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
+
+        if num_objectives is None:
+            self.num_objectives = len(self.objective_functions)
+        else:
+            self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.num_batch = num_batch
         self.num_params = len(lower_bounds)
@@ -330,10 +336,8 @@ class MOPSO(Optimizer):
             num_additional_iterations: Number of additional iterations to run. 
         """
         # load saved data
-        pso_attributes = FileManager.load_json(
-            'checkpoint/pso_attributes.json')
-        individual_states = FileManager.load_csv(
-            'checkpoint/individual_states.csv')
+        pso_attributes = FileManager.load_json('checkpoint/pso_attributes.json')
+        individual_states = FileManager.load_csv('checkpoint/individual_states.csv')
         pareto_front = FileManager.load_csv('checkpoint/pareto_front.csv')
 
         # restore pso attributes
