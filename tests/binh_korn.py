@@ -1,4 +1,4 @@
-from optimizer.mopso import MOPSO
+import optimizer
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -20,16 +20,18 @@ def f2(x, y):
 
 def f(params):
     return [[f1(params[i][0], params[i][1]), f2(params[i][0], params[i][1])] for i in range(len(params))]
-        
-pso = MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
+
+optimizer.FileManager.working_dir="tmp/binh_korn"
+       
+pso = optimizer.MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
             num_objectives=2, num_particles=num_agents, num_iterations=num_iterations, 
             inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1, diversity_coefficient=1.0,
             max_iter_no_improv=None, optimization_mode='global')
 
 # run the optimization algorithm
-pso.optimize(history_dir='tmp/history', checkpoint_dir='tmp/checkpoint')
+pso.optimize()
 
-metrics = [pd.read_csv('tmp/history/iteration' + str(i) + '.csv', 
+metrics = [pd.read_csv('tmp/binh_korn/history/iteration' + str(i) + '.csv', 
                        header=None, 
                        usecols=[num_params, num_params + 1]).transpose().to_numpy()
            for i in range(num_iterations)]
@@ -46,13 +48,13 @@ def animate(i):
     ax.set_title(str(i))
 
 ani=animation.FuncAnimation(fig, animate, interval=200, frames=range(num_iterations))
-ani.save('tmp/checkpoint/metrics.gif', writer='pillow')
+ani.save('tmp/binh_korn/checkpoint/metrics.gif', writer='pillow')
 
-pareto_front = pd.read_csv('tmp/checkpoint/pareto_front.csv', header=None).to_numpy()
+pareto_front = pd.read_csv('tmp/binh_korn/checkpoint/pareto_front.csv', header=None).to_numpy()
 pareto_x = [particle[num_params] for particle in pareto_front]
 pareto_y = [particle[num_params + 1] for particle in pareto_front]
 plt.scatter(pareto_x, pareto_y, s=5)
 plt.xlim(0, 140)
 plt.ylim(0, 70)
-plt.savefig('tmp/checkpoint/pf.png')
+plt.savefig('tmp/binh_korn/checkpoint/pf.png')
 
