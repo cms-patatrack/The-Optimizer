@@ -316,7 +316,7 @@ class MOPSO(Optimizer):
                                               np.ravel(particle.best_fitness)])
                              for batch in self.particles_batch for particle in batch],
                              'checkpoint/individual_states.csv')
-
+        print(f"Saving Pareto Front {len(self.pareto_front)}")
         FileManager.save_csv([np.concatenate([particle.position, np.ravel(particle.fitness)])
                              for batch in self.particles_batch for particle in batch],
                              'checkpoint/pareto_front.csv')
@@ -421,15 +421,15 @@ class MOPSO(Optimizer):
                 batch = future.result()
                 new_batches.append(batch)
             self.particles_batch = new_batches
-            save_particles = np.array([])
+            save_particles = [] 
             for batch in self.particles_batch:
                 for particle in batch:
                     l = np.concatenate([particle.position, np.ravel(particle.fitness)])
-                    save_particles = np.append(save_particles, l)
-
-            FileManager.save_csv([np.concatenate([particle.position, np.ravel(
-                                 particle.fitness)]) for batch in self.particles_batch for particle in batches],
+                    print(l)
+                    save_particles.append(l)
+            FileManager.save_csv(save_particles, 
                                  'history/iteration' + str(self.iteration) + '.csv')
+
 
             self.update_pareto_front()
 
@@ -457,9 +457,13 @@ class MOPSO(Optimizer):
             particle for batch in self.particles_batch for particle in batch]
 
         if self.incremental_pareto:
+            all_particles = [
+                particle for batch in self.particles_batch for particle in batch]
+
             particles = all_particles + self.pareto_front
         self.pareto_front = [copy.deepcopy(particle) for particle in particles
                              if not particle.is_dominated(particles)]
+        print(len(self.pareto_front))
 
         crowding_distances = self.calculate_crowding_distance(
             self.pareto_front)
