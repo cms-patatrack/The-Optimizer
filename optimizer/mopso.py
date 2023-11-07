@@ -103,17 +103,6 @@ class Particle:
         self.fitness = fitness
         self.best_fitness = best_fitness
 
-    def evaluate_fitness(self, objective_functions):
-        """
-        Evaluate the fitness of the particle based on the provided objective functions.
-        Calls the `set_fitness` method to update the particle's fitness and best position.
-
-        Parameters:
-            objective_functions (list): List of objective functions used for fitness evaluation.
-        """
-        fitness = [obj_func(self.position) for obj_func in objective_functions]
-        self.set_fitness(fitness)
-
     def update_best(self):
         """
         Update particle's fitness and best position
@@ -201,26 +190,21 @@ class MOPSO(Optimizer):
             Calculate the crowding distance for particles in the Pareto front.
     """
 
-    def __init__(self, objective_functions,
+    def __init__(self,
+                 objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  num_iterations=100,
                  optimization_mode='individual',
                  max_iter_no_improv=None,
-                 num_objectives=None,
                  incremental_pareto=False):
-        self.objective_functions = objective_functions
+        self.objective = objective
         if FileManager.loading_enabled:
             try:
                 self.load_checkpoint(num_additional_iterations=num_iterations)
                 return
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
-
-        if num_objectives is None:
-            self.num_objectives = len(self.objective_functions)
-        else:
-            self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.num_params = len(lower_bounds)
         self.lower_bounds = lower_bounds
@@ -231,7 +215,7 @@ class MOPSO(Optimizer):
         self.num_iterations = num_iterations
         self.max_iter_no_improv = max_iter_no_improv
         self.optimization_mode = optimization_mode
-        self.particles = [Particle(lower_bounds, upper_bounds, num_objectives, num_particles)
+        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
                           for _ in range(num_particles)]
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
@@ -248,7 +232,6 @@ class MOPSO(Optimizer):
         pso_attributes = {
             'lower_bounds': self.lower_bounds,
             'upper_bounds': self.upper_bounds,
-            'num_objectives': self.num_objectives,
             'num_particles': self.num_particles,
             'num_params': self.num_params,
             'inertia_weight': self.inertia_weight,
@@ -305,7 +288,6 @@ class MOPSO(Optimizer):
         # restore pso attributes
         self.lower_bounds = pso_attributes['lower_bounds']
         self.upper_bounds = pso_attributes['upper_bounds']
-        self.num_objectives = pso_attributes['num_objectives']
         self.num_particles = pso_attributes['num_particles']
         self.num_params = pso_attributes['num_params']
         self.inertia_weight = pso_attributes['inertia_weight']
@@ -321,7 +303,7 @@ class MOPSO(Optimizer):
         self.particles = []
         for i in range(self.num_particles):
             particle = Particle(self.lower_bounds, self.upper_bounds,
-                                num_objectives=self.num_objectives,
+                                num_objectives=self.objective.num_objectives,
                                 num_particles=self.num_particles)
             particle.set_state(
                 position=np.array(
@@ -330,7 +312,7 @@ class MOPSO(Optimizer):
                     individual_states[i][self.num_params:2*self.num_params], dtype=float),
                 best_position=np.array(
                     individual_states[i][2*self.num_params:3*self.num_params], dtype=float),
-                fitness=[np.inf] * self.num_objectives,
+                fitness=[np.inf] * self.objective.num_objectives,
                 best_fitness=np.array(
                     individual_states[i][3*self.num_params:], dtype=float)
             )
@@ -340,7 +322,7 @@ class MOPSO(Optimizer):
         self.pareto_front = []
         for i in range(len(pareto_front)):
             particle = Particle(self.lower_bounds, self.upper_bounds,
-                                num_objectives=self.num_objectives,
+                                num_objectives=self.objective.num_objectives,
                                 num_particles=self.num_particles)
             particle.set_state(position=pareto_front[i][:self.num_params],
                                fitness=pareto_front[i][self.num_params:],
@@ -364,16 +346,9 @@ class MOPSO(Optimizer):
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
         for _ in range(self.num_iterations):
-            if self.optimization_mode == 'global':
-                optimization_output = [objective_function([particle.position for
-                                                           particle in self.particles])
-                                       for objective_function in self.objective_functions]
-            for p_id, particle in enumerate(self.particles):
-                if self.optimization_mode == 'individual':
-                    particle.evaluate_fitness(self.objective_functions)
-                if self.optimization_mode == 'global':
-                    particle.set_fitness([output[p_id]
-                                         for output in optimization_output])
+            optimization_output = self.objective.evaluate([particle.position for particle in self.particles])
+            [particle.set_fitness(optimization_output[:,p_id]) for p_id, particle in enumerate(self.particles)]
+                
             FileManager.save_csv([np.concatenate([particle.position, np.ravel(
                                  particle.fitness)]) for particle in self.particles],
                                  'history/iteration' + str(self.iteration) + '.csv')
