@@ -194,14 +194,11 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 num_iterations=100,
-                 optimization_mode='individual',
-                 max_iter_no_improv=None,
                  incremental_pareto=False):
         self.objective = objective
         if FileManager.loading_enabled:
             try:
-                self.load_checkpoint(num_additional_iterations=num_iterations)
+                self.load_checkpoint()
                 return
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
@@ -212,9 +209,6 @@ class MOPSO(Optimizer):
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
-        self.num_iterations = num_iterations
-        self.max_iter_no_improv = max_iter_no_improv
-        self.optimization_mode = optimization_mode
         self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
                           for _ in range(num_particles)]
         self.iteration = 0
@@ -237,8 +231,6 @@ class MOPSO(Optimizer):
             'inertia_weight': self.inertia_weight,
             'cognitive_coefficient': self.cognitive_coefficient,
             'social_coefficient': self.social_coefficient,
-            'max_iter_no_improv': self.max_iter_no_improv,
-            'optimization_mode': self.optimization_mode,
             'incremental_pareto': self.incremental_pareto,
             'iteration': self.iteration
         }
@@ -270,7 +262,7 @@ class MOPSO(Optimizer):
                              for particle in self.pareto_front],
                              'checkpoint/pareto_front.csv')
 
-    def load_checkpoint(self, num_additional_iterations):
+    def load_checkpoint(self):
         """
         Load a checkpoint in order to continue a previous run.            
 
@@ -296,7 +288,6 @@ class MOPSO(Optimizer):
         self.max_iter_no_improv = pso_attributes['max_iter_no_improv']
         self.optimization_mode = pso_attributes['optimization_mode']
         self.incremental_pareto = pso_attributes['incremental_pareto']
-        self.num_iterations = num_additional_iterations
         self.iteration = pso_attributes['iteration']
 
         # restore particles
@@ -331,7 +322,7 @@ class MOPSO(Optimizer):
                                best_fitness=None)
             self.pareto_front.append(particle)
 
-    def optimize(self):
+    def optimize(self, num_iterations=100, max_iter_no_improv=None):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions. If `history_dir` is specified, the position and fitness of all particles 
@@ -345,7 +336,7 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        for _ in range(self.num_iterations):
+        for _ in range(num_iterations):
             optimization_output = self.objective.evaluate([particle.position for particle in self.particles])
             [particle.set_fitness(optimization_output[:,p_id]) for p_id, particle in enumerate(self.particles)]
                 
