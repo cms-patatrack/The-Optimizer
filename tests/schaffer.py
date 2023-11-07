@@ -27,9 +27,8 @@ optimizer.FileManager.loading_enabled = True
 objective = optimizer.Objective([f])
 
 pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub, 
-            num_particles=num_agents, num_iterations=num_iterations, 
-            inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1, 
-            max_iter_no_improv=None, optimization_mode='global')
+            num_particles=num_agents,
+            inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1)
 
 # run the optimization algorithm
 pso.optimize()

@@ -22,14 +22,14 @@ def f(params):
     return [[f1(params[i][0], params[i][1]), f2(params[i][0], params[i][1])] for i in range(len(params))]
 
 optimizer.FileManager.working_dir="tmp/binh_korn"
-       
-pso = optimizer.MOPSO(objective_functions=[f],lower_bounds=lb, upper_bounds=ub, 
-            num_objectives=2, num_particles=num_agents, num_iterations=num_iterations, 
-            inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1, diversity_coefficient=1.0,
-            max_iter_no_improv=None, optimization_mode='global')
+objective = optimizer.Objective([f])       
+
+pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub, 
+             num_particles=num_agents,
+            inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1)
 
 # run the optimization algorithm
-pso.optimize()
+pso.optimize(num_iterations)
 
 metrics = [pd.read_csv('tmp/binh_korn/history/iteration' + str(i) + '.csv', 
                        header=None, 
