@@ -42,7 +42,7 @@ class Particle:
     """
 
     def __init__(self, lower_bound, upper_bound, num_objectives, num_particles):
-        self.position = np.random.uniform(lower_bound, upper_bound)
+        self.position = np.asarray(lower_bound)
         self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.velocity = np.zeros_like(self.position)
@@ -223,7 +223,7 @@ class MOPSO(Optimizer):
             case 'upper_bounds':
                 [particle.set_position(self.upper_bounds) for particle in self.particles]
             case 'random':
-                pass
+                [particle.set_position(np.random.uniform(self.lower_bounds, self.upper_bounds)) for particle in self.particles]
             case _:
                 raise ValueError(f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
         self.iteration = 0
