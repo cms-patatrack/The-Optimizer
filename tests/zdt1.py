@@ -29,12 +29,11 @@ optimizer.FileManager.saving_enabled = False
 objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
 
 pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub, 
-            num_particles=num_agents, num_iterations=num_iterations, 
-            inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, 
-            max_iter_no_improv=None)
+            num_particles=num_agents,
+            inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2)
 
 # run the optimization algorithm
-pso.optimize()
+pso.optimize(num_iterations)
 
 fig, ax = plt.subplots()
 
