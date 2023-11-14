@@ -96,6 +96,9 @@ class Particle:
         self.fitness = np.array(fitness)
         self.update_best()
 
+    def set_position(self, position):
+        self.position = position
+        
     def set_state(self, velocity, position, best_position, fitness, best_fitness):
         self.velocity = velocity
         self.position = position
@@ -194,7 +197,7 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=False):
+                 incremental_pareto=False, initial_particles_position = 'spread'):
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -211,9 +214,28 @@ class MOPSO(Optimizer):
         self.social_coefficient = social_coefficient
         self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
                           for _ in range(num_particles)]
+        VALID_INITIAL_PARTICLES_POSITIONS = {'spread', 'lower_bounds', 'upper_bounds', 'random'}
+        match initial_particles_position:
+            case 'spread':
+                self.spread_particles()
+            case 'lower_bounds':
+                [particle.set_position(self.lower_bounds) for particle in self.particles]
+            case 'upper_bounds':
+                [particle.set_position(self.upper_bounds) for particle in self.particles]
+            case 'random':
+                pass
+            case _:
+                raise ValueError(f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
         self.pareto_front = []
+
+
+    def spread_particles(self):
+            mesh = np.meshgrid(*[np.linspace(l_b, u_b, num=int(self.num_particles**(1/self.num_params))) 
+                                 for l_b, u_b in zip(self.lower_bounds, self.upper_bounds)])
+            points = np.vstack([dim.flatten() for dim in mesh]).T
+            [particle.set_position(point) for particle, point in zip(self.particles, points)]            
 
     def save_attributes(self):
         """
@@ -336,7 +358,7 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        for _ in range(num_iterations):
+        for _ in range(self.num_iterations):
             optimization_output = self.objective.evaluate([particle.position for particle in self.particles])
             [particle.set_fitness(optimization_output[:,p_id]) for p_id, particle in enumerate(self.particles)]
                 
