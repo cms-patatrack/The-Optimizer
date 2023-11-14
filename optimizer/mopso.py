@@ -358,7 +358,7 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
-        for _ in range(self.num_iterations):
+        for _ in range(num_iterations):
             optimization_output = self.objective.evaluate([particle.position for particle in self.particles])
             [particle.set_fitness(optimization_output[:,p_id]) for p_id, particle in enumerate(self.particles)]
                 
