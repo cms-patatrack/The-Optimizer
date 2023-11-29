@@ -9,8 +9,8 @@ class Objective():
             self.num_objectives = num_objectives
         pass
     
-    def evaluate(self, items):
-        return np.array([objective_function([item for item in items]) for objective_function in self.objective_functions])
+    def evaluate(self, items, iter):
+        return np.array([objective_function([item for item in items], iter = iter) for objective_function in self.objective_functions])
     
     def type(self):
         return self.__class__.__name__
