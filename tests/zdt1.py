@@ -22,6 +22,8 @@ def zdt1_objective2(x):
     f2 = g * h
     return f2
 
+optimizer.Randomizer.rng = np.random.default_rng(42)
+
 optimizer.FileManager.working_dir="tmp/zdt1/"
 optimizer.FileManager.loading_enabled = False
 optimizer.FileManager.saving_enabled = False

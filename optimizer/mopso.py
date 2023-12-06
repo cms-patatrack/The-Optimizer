@@ -19,7 +19,7 @@ find the Pareto front of non-dominated solutions.
 """
 import copy
 import numpy as np
-from optimizer import Optimizer, FileManager
+from optimizer import Optimizer, FileManager, Randomizer
 
 
 class Particle:
@@ -64,9 +64,9 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
-        leader = np.random.choice(pareto_front[:int(self.num_particles)])
-        cognitive_random = np.random.uniform(0, 1)
-        social_random = np.random.uniform(0, 1)
+        leader = Randomizer.rng.choice(pareto_front[:int(self.num_particles)])
+        cognitive_random = Randomizer.rng.uniform(0, 1)
+        social_random = Randomizer.rng.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
             (self.best_position - self.position)
         social = social_coefficient * social_random * \
@@ -225,7 +225,7 @@ class MOPSO(Optimizer):
             [particle.set_position(self.upper_bounds)
              for particle in self.particles]
         elif initial_particles_position == 'random':
-            [particle.set_position(np.random.uniform(
+            [particle.set_position(Randomizer.rng.uniform(
                 self.lower_bounds, self.upper_bounds)) for particle in self.particles]
         else:
             raise ValueError(
