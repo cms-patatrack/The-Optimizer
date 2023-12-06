@@ -21,6 +21,9 @@ import copy
 import random
 import numpy as np
 from optimizer import Optimizer, FileManager
+from concurrent.futures import ProcessPoolExecutor
+import warnings
+from .termcolors import bcolors
 
 
 class Particle:
@@ -195,7 +198,7 @@ class MOPSO(Optimizer):
 
     def __init__(self,
                  objective,
-                 lower_bounds, upper_bounds, num_particles=50,
+                 lower_bounds, upper_bounds, num_particles=50, num_batch = 1,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  incremental_pareto=False, initial_particles_position='spread'):
         self.objective = objective
@@ -206,6 +209,7 @@ class MOPSO(Optimizer):
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
         self.num_particles = num_particles
+        self.num_batch = num_batch
         self.num_params = len(lower_bounds)
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
@@ -231,6 +235,32 @@ class MOPSO(Optimizer):
         else:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
+        if (num_batch == 1):
+            self.particles_batch.append(self.particles)
+            self.batch_size = len(self.particles)
+        else:
+            # Calculate the approximate batch size
+            self.batch_size = len(self.particles) // self.num_batch
+
+            # Check if the division leaves some elements unallocated
+            remaining_elements = len(self.particles) % self.batch_size
+
+            if remaining_elements > 0:
+                # Warn the user and suggest adjusting the number of particles or batches
+                warning_message = (
+                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.ENDC}"
+                )
+                warnings.warn(warning_message)
+
+            # Use list comprehension to create batches
+            self.particles_batch = [self.particles[i:i + self.batch_size]
+                                    for i in range(0, len(self.particles), self.batch_size)]
+
+            # If the division leaves some elements unallocated, add them to the last batch
+            if remaining_elements > 0:
+                last_batch = self.particles_batch.pop()
+                last_batch.extend(self.particles[len(self.particles_batch) * self.batch_size:])
+                self.particles_batch.append(last_batch)
 
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
@@ -256,6 +286,7 @@ class MOPSO(Optimizer):
             'upper_bounds': self.upper_bounds,
             'num_particles': self.num_particles,
             'num_params': self.num_params,
+            'num_batch': self.num_batch,
             'inertia_weight': self.inertia_weight,
             'cognitive_coefficient': self.cognitive_coefficient,
             'social_coefficient': self.social_coefficient,
@@ -283,11 +314,11 @@ class MOPSO(Optimizer):
                                               particle.velocity,
                                               particle.best_position,
                                               np.ravel(particle.best_fitness)])
-                             for particle in self.particles],
+                             for batch in self.particles_batch for particle in batch],
                              'checkpoint/individual_states.csv')
-
+        print(f"Saving Pareto Front {len(self.pareto_front)}")
         FileManager.save_csv([np.concatenate([particle.position, np.ravel(particle.fitness)])
-                             for particle in self.pareto_front],
+                             for batch in self.particles_batch for particle in batch],
                              'checkpoint/pareto_front.csv')
 
     def load_checkpoint(self):
@@ -310,6 +341,7 @@ class MOPSO(Optimizer):
         self.upper_bounds = pso_attributes['upper_bounds']
         self.num_particles = pso_attributes['num_particles']
         self.num_params = pso_attributes['num_params']
+        self.num_batch = pso_attributes['num_batch']
         self.inertia_weight = pso_attributes['inertia_weight']
         self.cognitive_coefficient = pso_attributes['cognitive_coefficient']
         self.social_coefficient = pso_attributes['social_coefficient']
@@ -336,6 +368,35 @@ class MOPSO(Optimizer):
                     individual_states[i][3*self.num_params:], dtype=float)
             )
             self.particles.append(particle)
+	
+	#restore batches
+        self.particles_batch = []
+        if (self.num_batch == 1):
+            self.particles_batch.append(self.particles)
+            self.batch_size = len(self.particles)
+        else:
+            # Calculate the approximate batch size
+            self.batch_size = len(self.particles) // self.num_batch
+
+            # Check if the division leaves some elements unallocated
+            remaining_elements = len(self.particles) % self.batch_size
+
+            if remaining_elements > 0:
+                # Warn the user and suggest adjusting the number of particles or batches
+                warning_message = (
+                    f"{bcolors.WARNING}The specified number of batches ({self.num_batch}) does not evenly divide the number of particles ({len(self.particles)}).{bcolors.ENDC}"
+                )
+                warnings.warn(warning_message)
+
+            # Use list comprehension to create batches
+            self.particles_batch = [self.particles[i:i + self.batch_size]
+                                    for i in range(0, len(self.particles), self.batch_size)]
+
+            # If the division leaves some elements unallocated, add them to the last batch
+            if remaining_elements > 0:
+                last_batch = self.particles_batch.pop()
+                last_batch.extend(self.particles[len(self.particles_batch) * self.batch_size:])
+                self.particles_batch.append(last_batch)
 
         # restore pareto front
         self.pareto_front = []
@@ -349,8 +410,19 @@ class MOPSO(Optimizer):
                                best_position=None,
                                best_fitness=None)
             self.pareto_front.append(particle)
+        
 
-    def optimize(self, num_iterations=100, max_iter_no_improv=None):
+    def process_batch(self, worker_id, batch):
+        # Launch a program for this batch using objective_function
+        print(f"Worker ID {worker_id}")
+        params = [particle.position for particle in batch]
+        optimization_output = self.objective.evaluate(params, worker_id )
+        for p_id, particle in enumerate(batch):
+            particle.set_fitness(optimization_output[:,p_id])
+            batch[p_id] = particle
+        return batch
+
+    def optimize(self, num_iterations = 100, max_iter_no_improv = None): 
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions. If `history_dir` is specified, the position and fitness of all particles 
@@ -365,23 +437,36 @@ class MOPSO(Optimizer):
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
         for _ in range(num_iterations):
-            optimization_output = self.objective.evaluate(
-                [particle.position for particle in self.particles])
-            [particle.set_fitness(optimization_output[:, p_id])
-             for p_id, particle in enumerate(self.particles)]
+            with ProcessPoolExecutor(max_workers=self.num_batch) as executor:
+                futures = [executor.submit(self.process_batch, worker_id, batch)
+                           for worker_id, batch in enumerate(self.particles_batch )]
 
-            FileManager.save_csv([np.concatenate([particle.position, np.ravel(
-                                 particle.fitness)]) for particle in self.particles],
+            new_batches = []
+            for future in futures:
+                batch = future.result()
+                new_batches.append(batch)
+            self.particles_batch = new_batches
+            save_particles = [] 
+            updated_particles = []
+            for batch in self.particles_batch:
+                for particle in batch:
+                    l = np.concatenate([particle.position, np.ravel(particle.fitness)])
+                    save_particles.append(l)
+                    updated_particles.append(particle)
+            FileManager.save_csv(save_particles, 
                                  'history/iteration' + str(self.iteration) + '.csv')
 
+            self.particles = updated_particles
             self.update_pareto_front()
 
-            for particle in self.particles:
-                particle.update_velocity(self.pareto_front,
-                                         self.inertia_weight,
-                                         self.cognitive_coefficient,
-                                         self.social_coefficient)
-                particle.update_position(self.lower_bounds, self.upper_bounds)
+            for batch in self.particles_batch:
+                for particle in batch:
+                    particle.update_velocity(self.pareto_front,
+                                             self.inertia_weight,
+                                             self.cognitive_coefficient,
+                                             self.social_coefficient)
+                    particle.update_position(
+                        self.lower_bounds, self.upper_bounds)
 
             self.iteration += 1
 
@@ -394,12 +479,17 @@ class MOPSO(Optimizer):
         """
         Update the Pareto front of non-dominated solutions across all iterations.
         """
-        particles = self.particles
-        if self.incremental_pareto:
-            particles = particles + self.pareto_front
+        all_particles = [
+            particle for batch in self.particles_batch for particle in batch]
 
+        if self.incremental_pareto:
+            all_particles = [
+                particle for batch in self.particles_batch for particle in batch]
+
+            particles = all_particles + self.pareto_front
         self.pareto_front = [copy.deepcopy(particle) for particle in particles
                              if not particle.is_dominated(particles)]
+        print(len(self.pareto_front))
 
         crowding_distances = self.calculate_crowding_distance(
             self.pareto_front)
@@ -413,10 +503,12 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front.
         """
+        all_particles = [
+            particle for batch in self.particles_batch for particle in batch]
         pareto_front = []
-        for particle in self.particles:
+        for particle in all_particles:
             dominated = False
-            for other_particle in self.particles:
+            for other_particle in all_particles:
                 if np.all(particle.fitness >= other_particle.fitness) and \
                    np.any(particle.fitness > other_particle.fitness):
                     dominated = True
