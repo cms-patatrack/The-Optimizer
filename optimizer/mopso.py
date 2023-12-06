@@ -18,7 +18,6 @@ Both classes are designed to be used in conjunction to perform the MOPSO optimiz
 find the Pareto front of non-dominated solutions.
 """
 import copy
-import random
 import numpy as np
 from optimizer import Optimizer, FileManager
 
@@ -65,7 +64,7 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
-        leader = random.choice(pareto_front[:int(self.num_particles)])
+        leader = np.random.choice(pareto_front[:int(self.num_particles)])
         cognitive_random = np.random.uniform(0, 1)
         social_random = np.random.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
