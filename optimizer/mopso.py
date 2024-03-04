@@ -189,9 +189,19 @@ class MOPSO(Optimizer):
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
         self.num_particles = num_particles
+        # TODO: Check if lower_bounds and upper_bounds are the same lenght
+        # Warn if different then keep the lowest length
+        
         self.num_params = len(lower_bounds)
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
+        self.types = [type(lower_bounds[i]) for i in lower_bounds]
+        # TODO: Check if upper_bounds and lower_bounds are the same type
+        # Warn if different then keep the least restrictive type
+        # i.e. if one is int and the other is float, keep float 
+        # or if one is int and the other is bool, keep int
+        
+        # TODO: If type is not int or float or bool, raise an error
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
