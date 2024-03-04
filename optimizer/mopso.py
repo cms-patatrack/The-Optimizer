@@ -209,17 +209,36 @@ class MOPSO(Optimizer):
             'spread', 'lower_bounds', 'upper_bounds', 'random'}
 
         if initial_particles_position == 'spread':
+            for t in [type(lb) for lb in lower_bounds]:
+                if t != float:
+                    warnings.warn("Warning: spread_particles only works with float type, Fallback to random")
+                    initial_particles_position='random'
+                    break
             self.spread_particles()
-        elif initial_particles_position == 'lower_bounds':
+            
+        if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
              for particle in self.particles]
         elif initial_particles_position == 'upper_bounds':
             [particle.set_position(self.upper_bounds)
              for particle in self.particles]
         elif initial_particles_position == 'random':
-            [particle.set_position(Randomizer.rng.uniform(
-                self.lower_bounds, self.upper_bounds)) for particle in self.particles]
-        else:
+            def random_position():
+                positions = []
+                for i in range(self.num_params):
+                    if type(self.lower_bounds[i]) == int:
+                        position = Randomizer.rng.integers(self.lower_bounds[i], self.upper_bounds[i])
+                    elif type(self.lower_bounds[i]) == float:
+                        position = Randomizer.rng.uniform(self.lower_bounds[i], self.upper_bounds[i])
+                    elif type(self.lower_bounds[i]) == bool:
+                        position = Randomizer.rng.choice([True, False])
+                    else:
+                        raise ValueError(f"Type {type(self.lower_bounds[i])} not supported")
+                    positions.append(position)
+                return positions
+                
+            [particle.set_position(random_position()) for particle in self.particles] 
+        elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
 
