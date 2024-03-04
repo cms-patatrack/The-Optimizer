@@ -9,8 +9,8 @@ num_agents = 60
 num_iterations = 200
 num_params = 30
 
-lb = [0] * num_params
-ub = [1] * num_params
+lb = [0.] * num_params
+ub = [1.] * num_params
 
 def zdt2_objective1(x):
     return x[0]
