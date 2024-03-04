@@ -6,11 +6,11 @@ import matplotlib.animation as animation
 
 
 num_agents = 100
-num_iterations = 300
+num_iterations = 100
 num_params = 30
 
-lb = [0] * num_params
-ub = [1] * num_params
+lb = [0.] * num_params
+ub = [1.] * num_params
 
 def zdt2_objective1(x):
     return x[0]
