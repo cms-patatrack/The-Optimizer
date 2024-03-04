@@ -82,8 +82,13 @@ class Particle:
             lower_bound (numpy.ndarray): Lower bound for the particle's position.
             upper_bound (numpy.ndarray): Upper bound for the particle's position.
         """
-        self.position = np.clip(
-            self.position + self.velocity, lower_bound, upper_bound)
+        new_position = np.empty_like(self.position)
+        for i in range(len(lower_bound)):
+            if type(lower_bound[i]) == int or type(lower_bound[i]) == bool:
+                new_position[i] = np.round(self.position[i] + self.velocity[i])
+            else:
+                new_position[i] = self.position[i] + self.velocity[i]
+        self.position = np.clip(new_position, lower_bound, upper_bound)
 
     def set_fitness(self, fitness):
         """
@@ -251,7 +256,7 @@ class MOPSO(Optimizer):
                     else:
                         raise ValueError(f"Type {type(self.lower_bounds[i])} not supported")
                     positions.append(position)
-                return positions
+                return np.array(positions)
                 
             [particle.set_position(random_position()) for particle in self.particles] 
         elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
