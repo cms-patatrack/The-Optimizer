@@ -46,7 +46,7 @@ class Particle:
         self.num_particles = num_particles
         self.velocity = np.zeros_like(self.position)
         self.best_position = self.position
-        self.best_fitness = np.ones(self.num_objectives)
+        self.best_fitness = np.array([np.inf]*self.num_objectives)
         self.fitness = np.ones(self.num_objectives)
 
     def update_velocity(self,
@@ -92,7 +92,7 @@ class Particle:
         Parameters:
             fitness (numpy.ndarray): The fitness values of the particle for each objective.
         """
-        self.fitness = np.array(fitness)
+        self.fitness = fitness
         self.update_best()
 
     def set_position(self, position):
@@ -109,9 +109,9 @@ class Particle:
         """
         Update particle's fitness and best position
         """
-        if np.any(self.best_fitness == np.zeros(self.num_objectives)):
-            self.fitness = np.ones(self.num_objectives)
-        if np.all(self.fitness < self.best_fitness):
+        # if np.any(self.best_fitness == np.zeros(self.num_objectives)):
+        #     self.fitness = np.ones(self.num_objectives)
+        if np.all(self.fitness <= self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
 
@@ -368,7 +368,6 @@ class MOPSO(Optimizer):
                 [particle.position for particle in self.particles])
             [particle.set_fitness(optimization_output[:, p_id])
              for p_id, particle in enumerate(self.particles)]
-
             FileManager.save_csv([np.concatenate([particle.position, np.ravel(
                                  particle.fitness)]) for particle in self.particles],
                                  'history/iteration' + str(self.iteration) + '.csv')
