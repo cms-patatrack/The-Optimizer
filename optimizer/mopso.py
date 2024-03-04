@@ -19,6 +19,7 @@ find the Pareto front of non-dominated solutions.
 """
 import copy
 import numpy as np
+import warnings
 from optimizer import Optimizer, FileManager, Randomizer
 
 
@@ -205,13 +206,14 @@ class MOPSO(Optimizer):
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
         self.num_particles = num_particles
-        # TODO: Check if lower_bounds and upper_bounds are the same lenght
-        # Warn if different then keep the lowest length
-        
-        self.num_params = len(lower_bounds)
+
+        if len(lower_bounds) != len(upper_bounds):
+            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths. The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
+            
+        self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
-        self.types = [type(lower_bounds[i]) for i in lower_bounds]
+
         # TODO: Check if upper_bounds and lower_bounds are the same type
         # Warn if different then keep the least restrictive type
         # i.e. if one is int and the other is float, keep float 
