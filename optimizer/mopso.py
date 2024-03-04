@@ -21,9 +21,11 @@ import copy
 import itertools
 import math
 import numpy as np
+import math
 import warnings
 from optimizer import Optimizer, FileManager, Randomizer
 from numba import njit, jit
+import scipy.stats as stats
 
 
 class Particle:
@@ -188,7 +190,7 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=True, initial_particles_position='spread'):
+                 incremental_pareto=True, initial_particles_position='spread', default_point=None):
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -213,7 +215,7 @@ class MOPSO(Optimizer):
         self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
                           for _ in range(num_particles)]
         VALID_INITIAL_PARTICLES_POSITIONS = {
-            'spread', 'lower_bounds', 'upper_bounds', 'random'}
+            'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
         if initial_particles_position == 'spread':
             self.spread_particles()
@@ -240,6 +242,20 @@ class MOPSO(Optimizer):
                 return np.array(positions)
                 
             [particle.set_position(random_position()) for particle in self.particles] 
+            
+        elif initial_particles_position == 'gaussian':
+            if default_point is None:
+                default_point = np.mean([self.lower_bounds, self.upper_bounds], axis=0)
+            else:
+                default_point = np.array(default_point)
+                self.particles[0].set_position(default_point)
+            a_trunc = np.array(self.lower_bounds)
+            b_trunc = np.array(self.upper_bounds)
+            loc = default_point
+            scale = (np.array(self.upper_bounds) - np.array(self.lower_bounds))/4
+            a, b = (a_trunc - loc) / scale, (b_trunc - loc) / scale
+            [particle.set_position(stats.truncnorm.rvs(a, b, loc, scale)) for particle in self.particles]
+                
         elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
