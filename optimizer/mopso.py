@@ -197,13 +197,9 @@ class MOPSO(Optimizer):
         self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
-
-        # TODO: Check if upper_bounds and lower_bounds are the same type
-        # Warn if different then keep the least restrictive type
-        # i.e. if one is int and the other is float, keep float 
-        # or if one is int and the other is bool, keep int
         
-        # TODO: If type is not int or float or bool, raise an error
+        self.check_types()       
+        
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
@@ -230,6 +226,30 @@ class MOPSO(Optimizer):
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
         self.pareto_front = []
+
+    def check_types(self):
+        lb_types = [type(lb) for lb in self.lower_bounds]
+        ub_types = [type(ub) for ub in self.upper_bounds]
+        
+        acceptable_types = [int, float, bool]
+        
+        for i in range(self.num_params):
+            if lb_types[i] not in acceptable_types:
+                raise ValueError(f"Lower bound type {lb_types[i]} for Lower bound {i} is not acceptable")
+            if ub_types[i] not in acceptable_types:
+                raise ValueError(f"Upper bound type {ub_types[i]} for Upper bound {i} is not acceptable")
+        
+        if lb_types != ub_types:
+            warnings.warn("Warning: lower_bounds and upper_bounds are of different types")
+            warnings.warn("Keeping the least restrictive type")
+            for i in range(self.num_params):
+                if lb_types[i] == float or ub_types[i] == float:
+                    self.lower_bounds[i] = float(self.lower_bounds[i])
+                    self.upper_bounds[i] = float(self.upper_bounds[i])
+                elif lb_types[i] == int or ub_types[i] == int:
+                    self.upper_bounds[i] = int(self.upper_bounds[i])
+                    self.lower_bounds[i] = int(self.lower_bounds[i])
+
 
     def spread_particles(self):
         mesh = np.meshgrid(*[np.linspace(l_b, u_b, num=int(self.num_particles**(1/self.num_params)))
