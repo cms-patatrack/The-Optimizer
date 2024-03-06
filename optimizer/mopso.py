@@ -39,7 +39,6 @@ class Particle:
         best_fitness (numpy.ndarray): Best fitness values achieved by the particle.
         fitness (numpy.ndarray): Current fitness values of the particle.
     """
-
     def __init__(self, lower_bound, upper_bound, num_objectives, num_particles):
         self.position = np.asarray(lower_bound)
         self.num_objectives = num_objectives
@@ -197,6 +196,7 @@ class MOPSO(Optimizer):
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  incremental_pareto=False, initial_particles_position='spread'):
+        super().__init__()
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -364,6 +364,7 @@ class MOPSO(Optimizer):
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
         for _ in range(num_iterations):
+            print(f"iteration {self.iteration}, pareto front size: {len(self.pareto_front)}", end='\r' )
             optimization_output = self.objective.evaluate(
                 [particle.position for particle in self.particles])
             [particle.set_fitness(optimization_output[:, p_id])
@@ -382,6 +383,7 @@ class MOPSO(Optimizer):
                 particle.update_position(self.lower_bounds, self.upper_bounds)
 
             self.iteration += 1
+            self.history.append([{"position":particle.position, "fitness":particle.fitness} for particle in self.particles])          
 
         self.save_attributes()
         self.save_state()

@@ -3,10 +3,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from optimizer.feature import FeatureImportance
 
 
 num_agents = 100
-num_iterations = 200
+num_iterations = 10
 num_params = 30
 
 lb = [0] * num_params
@@ -37,6 +38,12 @@ pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub,
 
 # run the optimization algorithm
 pso.optimize(num_iterations)
+
+correlation = FeatureImportance(pso).compute_correlation()
+fig, ax = plt.subplots()
+cax = ax.matshow(correlation, cmap='coolwarm')
+fig.colorbar(cax)
+plt.savefig('tmp/correlation.png')
 
 fig, ax = plt.subplots()
 
