@@ -19,6 +19,7 @@ find the Pareto front of non-dominated solutions.
 """
 import copy
 import numpy as np
+import math
 import warnings
 from optimizer import Optimizer, FileManager, Randomizer
 from numba import njit, jit
@@ -214,11 +215,6 @@ class MOPSO(Optimizer):
             'spread', 'lower_bounds', 'upper_bounds', 'random'}
 
         if initial_particles_position == 'spread':
-            for t in [type(lb) for lb in lower_bounds]:
-                if t != float:
-                    warnings.warn("Warning: spread_particles only works with float type, Fallback to random")
-                    initial_particles_position='random'
-                    break
             self.spread_particles()
             
         if initial_particles_position == 'lower_bounds':
@@ -274,13 +270,52 @@ class MOPSO(Optimizer):
                     self.upper_bounds[i] = int(self.upper_bounds[i])
                     self.lower_bounds[i] = int(self.lower_bounds[i])
 
+    def insert_nodes(self, param_list, is_bool=False):
+        indices = [i for i in range(len(param_list) - 1)]
+        is_int = any(isinstance(x, int) for x in param_list)
+        is_float = any(isinstance(x, float) for x in param_list)
+        if is_float:
+            new_values = [(param_list[idx] + param_list[idx + 1]) / 2 for idx in indices]
+        elif is_int:
+            new_values = [math.floor((param_list[idx] + param_list[idx + 1]) / 2) for idx in indices]
+        for new_value in new_values:
+            for idx, val in enumerate(param_list[:-1]):
+                if val <= new_value < param_list[idx + 1]:
+                    if is_bool:
+                        param_list.insert(idx + 1, bool(new_value))
+                    else:
+                        param_list.insert(idx + 1, new_value)
+                    break
+        return param_list
+    
+    def get_nodes(self):
+        all_nodes = [[self.lower_bounds[idx], self.upper_bounds[idx]] for idx in range(self.num_params)]
+        indices_with_bool = [idx for idx, node in enumerate(all_nodes) if any(isinstance(val, bool) for val in node)]
+        all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(val, bool) and not val else val for val in node] for node in all_nodes]
+
+        if self.num_particles < self.num_params:
+            warnings.warn(f"Warning: not enough particles, now you are running with {len(all_nodes[0])} particles")
+
+        particle_count = len(all_nodes[0])
+        while particle_count < self.num_particles:
+            for idx in range(self.num_params):
+                nodes = all_nodes[idx]
+                len_before = len(nodes)
+                if idx in indices_with_bool:
+                    nodes = self.insert_nodes(nodes, is_bool=True)
+                else:
+                    nodes = self.insert_nodes(nodes)
+                len_after = len(nodes)
+                particle_count += (len_after - len_before) / self.num_params
+        for idx in indices_with_bool:
+            all_nodes[idx][0] = False
+            all_nodes[idx][len(all_nodes[idx]) - 1] = True
+        return np.array(all_nodes, dtype=object).T
 
     def spread_particles(self):
-        mesh = np.meshgrid(*[np.linspace(l_b, u_b, num=int(self.num_particles**(1/self.num_params)))
-                             for l_b, u_b in zip(self.lower_bounds, self.upper_bounds)])
-        points = np.vstack([dim.flatten() for dim in mesh]).T
-        [particle.set_position(point)
-         for particle, point in zip(self.particles, points)]
+        positions = self.get_nodes()
+        np.random.shuffle(positions)
+        [particle.set_position(point) for particle, point in zip(self.particles, positions)]
 
     def save_attributes(self):
         """
