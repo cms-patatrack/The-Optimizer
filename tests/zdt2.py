@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 
-num_agents = 100
-num_iterations = 300
+num_agents = 60
+num_iterations = 200
 num_params = 30
 
 lb = [0] * num_params

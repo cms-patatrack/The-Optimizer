@@ -197,7 +197,7 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=False, initial_particles_position='spread'):
+                 incremental_pareto=True, initial_particles_position='spread'):
         self.objective = objective
         if FileManager.loading_enabled:
             try:
