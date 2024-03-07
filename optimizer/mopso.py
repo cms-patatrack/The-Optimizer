@@ -383,9 +383,9 @@ class MOPSO(Optimizer):
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
         
         if self.incremental_pareto:
-            self.pareto_front = [copy.deepcopy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
+            self.pareto_front = [copy.copy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
         else:
-            self.pareto_front = [copy.deepcopy(particles[i]) for i in range(pareto_lenght, len(particles)) if not dominanted[i]]
+            self.pareto_front = [copy.copy(particles[i]) for i in range(pareto_lenght, len(particles)) if not dominanted[i]]
             
         crowding_distances = self.calculate_crowding_distance(
             self.pareto_front)
