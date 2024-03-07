@@ -408,28 +408,6 @@ class MOPSO(Optimizer):
             self.pareto_front)
         self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
 
-    def get_current_pareto_front(self):
-        """
-        Get the Pareto front of non-dominated solutions at current iteration.
-
-        Returns:
-            list: List of Particle objects representing the Pareto front.
-        """
-        pareto_front = []
-        for particle in self.particles:
-            dominated = False
-            for other_particle in self.particles:
-                if np.all(particle.fitness >= other_particle.fitness) and \
-                   np.any(particle.fitness > other_particle.fitness):
-                    dominated = True
-                    break
-            if not dominated:
-                pareto_front.append(particle)
-        # Sort the Pareto front by crowding distance
-        crowding_distances = self.calculate_crowding_distance(pareto_front)
-        pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
-        return pareto_front
-
     def calculate_crowding_distance(self, pareto_front):
         """
         Calculate the crowding distance for particles in the Pareto front.

@@ -38,7 +38,7 @@ pso.optimize(num_iterations)
 
 fig, ax = plt.subplots()
 
-pareto_front = pso.get_current_pareto_front()
+pareto_front = pso.pareto_front
 n_pareto_points = len(pareto_front)
 pareto_x = [particle.fitness[0] for particle in pareto_front]
 pareto_y = [particle.fitness[1] for particle in pareto_front]
