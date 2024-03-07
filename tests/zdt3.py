@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 
-num_agents = 200
-num_iterations = 300
+num_agents = 60
+num_iterations = 200
 num_params = 30
 
 lb = [0] * num_params
@@ -38,7 +38,7 @@ pso.optimize(num_iterations)
 
 fig, ax = plt.subplots()
 
-pareto_front = pso.get_current_pareto_front()
+pareto_front = pso.pareto_front
 n_pareto_points = len(pareto_front)
 pareto_x = [particle.fitness[0] for particle in pareto_front]
 pareto_y = [particle.fitness[1] for particle in pareto_front]
