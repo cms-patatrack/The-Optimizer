@@ -20,6 +20,7 @@ find the Pareto front of non-dominated solutions.
 import copy
 import numpy as np
 from optimizer import Optimizer, FileManager, Randomizer
+from numba import njit, jit
 
 
 class Particle:
@@ -114,7 +115,7 @@ class Particle:
         if np.all(self.fitness <= self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
-
+    @njit
     def is_dominated(self, others):
         """
         Check if the particle is dominated by any other particle.
@@ -126,8 +127,8 @@ class Particle:
             bool: True if the particle is dominated, False otherwise
         """
         for particle in others:
-            if np.all(self.fitness >= particle.fitness) and \
-               np.any(self.fitness > particle.fitness):
+            if np.any(self.fitness > particle.fitness) and \
+                np.all(self.fitness >= particle.fitness):
                 return True
         return False
 
@@ -392,17 +393,20 @@ class MOPSO(Optimizer):
         """
         Update the Pareto front of non-dominated solutions across all iterations.
         """
-        particles = self.particles
+        # Given the array of particles with n fitness values, pareto_fitness is an array with n rows of num_particles columns
+        pareto_lenght = len(self.pareto_front)
+        particles = self.pareto_front + self.particles
+        particle_fitnesses = np.array([particle.fitness for particle in self.pareto_front]+ [particle.fitness for particle in self.particles])
+        dominanted = get_dominated(particle_fitnesses, pareto_lenght)
+        
         if self.incremental_pareto:
-            particles = particles + self.pareto_front
-
-        self.pareto_front = [copy.deepcopy(particle) for particle in particles
-                             if not particle.is_dominated(particles)]
-
+            self.pareto_front = [copy.deepcopy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
+        else:
+            self.pareto_front = [copy.deepcopy(particles[i]) for i in range(pareto_lenght, len(particles)) if not dominanted[i]]
+            
         crowding_distances = self.calculate_crowding_distance(
             self.pareto_front)
-        self.pareto_front.sort(
-            key=lambda x: crowding_distances[x], reverse=True)
+        self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
 
     def get_current_pareto_front(self):
         """
@@ -466,3 +470,15 @@ class MOPSO(Optimizer):
             point_to_distance[point] = distances[i]
 
         return point_to_distance
+@njit
+def get_dominated(particles, pareto_lenght):
+    dominated_particles = np.zeros(len(particles))
+    for i in range(len(particles)):
+        dominated = False
+        for j in range(pareto_lenght, len(particles)):
+            if np.any(particles[i] > particles[j]) and \
+                np.all(particles[i] >= particles[j]):
+                dominated = True
+                break
+        dominated_particles[i] = dominated
+    return dominated_particles    

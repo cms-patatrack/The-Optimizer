@@ -33,14 +33,15 @@ objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
 pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub, 
             num_particles=num_agents,
             inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2
-            , initial_particles_position='random')
+            , initial_particles_position='random', incremental_pareto=True)
 
 # run the optimization algorithm
 pso.optimize(num_iterations)
 
+print(len(pso.pareto_front))
 fig, ax = plt.subplots()
 
-pareto_front = pso.get_current_pareto_front()
+pareto_front = pso.pareto_front
 n_pareto_points = len(pareto_front)
 pareto_x = [particle.fitness[0] for particle in pareto_front]
 pareto_y = [particle.fitness[1] for particle in pareto_front]
