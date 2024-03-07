@@ -18,8 +18,9 @@ Both classes are designed to be used in conjunction to perform the MOPSO optimiz
 find the Pareto front of non-dominated solutions.
 """
 import copy
-import numpy as np
+import itertools
 import math
+import numpy as np
 import warnings
 from optimizer import Optimizer, FileManager, Randomizer
 from numba import njit, jit
@@ -310,7 +311,8 @@ class MOPSO(Optimizer):
         for idx in indices_with_bool:
             all_nodes[idx][0] = False
             all_nodes[idx][len(all_nodes[idx]) - 1] = True
-        return np.array(all_nodes, dtype=object).T
+        combinations = itertools.product(*all_nodes)
+        return np.array([np.array(combo, dtype=object) for combo in combinations])
 
     def spread_particles(self):
         positions = self.get_nodes()
