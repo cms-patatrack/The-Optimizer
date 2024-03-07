@@ -115,23 +115,6 @@ class Particle:
         if np.all(self.fitness <= self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
-    @njit
-    def is_dominated(self, others):
-        """
-        Check if the particle is dominated by any other particle.
-
-        Parameters:
-            others (list): List of other particles.
-
-        Returns:
-            bool: True if the particle is dominated, False otherwise
-        """
-        for particle in others:
-            if np.any(self.fitness > particle.fitness) and \
-                np.all(self.fitness >= particle.fitness):
-                return True
-        return False
-
 
 class MOPSO(Optimizer):
     """
