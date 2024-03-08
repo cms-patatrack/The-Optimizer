@@ -18,7 +18,10 @@ Both classes are designed to be used in conjunction to perform the MOPSO optimiz
 find the Pareto front of non-dominated solutions.
 """
 import copy
+import itertools
+import math
 import numpy as np
+import warnings
 from optimizer import Optimizer, FileManager, Randomizer
 from numba import njit, jit
 
@@ -82,8 +85,13 @@ class Particle:
             lower_bound (numpy.ndarray): Lower bound for the particle's position.
             upper_bound (numpy.ndarray): Upper bound for the particle's position.
         """
-        self.position = np.clip(
-            self.position + self.velocity, lower_bound, upper_bound)
+        new_position = np.empty_like(self.position)
+        for i in range(len(lower_bound)):
+            if type(lower_bound[i]) == int or type(lower_bound[i]) == bool:
+                new_position[i] = np.round(self.position[i] + self.velocity[i])
+            else:
+                new_position[i] = self.position[i] + self.velocity[i]
+        self.position = np.clip(new_position, lower_bound, upper_bound)
 
     def set_fitness(self, fitness):
         """
@@ -189,9 +197,16 @@ class MOPSO(Optimizer):
             except FileNotFoundError as e:
                 print("Checkpoint not found. Fallback to standard construction.")
         self.num_particles = num_particles
-        self.num_params = len(lower_bounds)
+
+        if len(lower_bounds) != len(upper_bounds):
+            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths. The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
+            
+        self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
+        
+        self.check_types()       
+        
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
@@ -202,16 +217,30 @@ class MOPSO(Optimizer):
 
         if initial_particles_position == 'spread':
             self.spread_particles()
-        elif initial_particles_position == 'lower_bounds':
+            
+        if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
              for particle in self.particles]
         elif initial_particles_position == 'upper_bounds':
             [particle.set_position(self.upper_bounds)
              for particle in self.particles]
         elif initial_particles_position == 'random':
-            [particle.set_position(Randomizer.rng.uniform(
-                self.lower_bounds, self.upper_bounds)) for particle in self.particles]
-        else:
+            def random_position():
+                positions = []
+                for i in range(self.num_params):
+                    if type(self.lower_bounds[i]) == int:
+                        position = Randomizer.rng.integers(self.lower_bounds[i], self.upper_bounds[i])
+                    elif type(self.lower_bounds[i]) == float:
+                        position = Randomizer.rng.uniform(self.lower_bounds[i], self.upper_bounds[i])
+                    elif type(self.lower_bounds[i]) == bool:
+                        position = Randomizer.rng.choice([True, False])
+                    else:
+                        raise ValueError(f"Type {type(self.lower_bounds[i])} not supported")
+                    positions.append(position)
+                return np.array(positions)
+                
+            [particle.set_position(random_position()) for particle in self.particles] 
+        elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
 
@@ -219,12 +248,76 @@ class MOPSO(Optimizer):
         self.incremental_pareto = incremental_pareto
         self.pareto_front = []
 
+    def check_types(self):
+        lb_types = [type(lb) for lb in self.lower_bounds]
+        ub_types = [type(ub) for ub in self.upper_bounds]
+        
+        acceptable_types = [int, float, bool]
+        
+        for i in range(self.num_params):
+            if lb_types[i] not in acceptable_types:
+                raise ValueError(f"Lower bound type {lb_types[i]} for Lower bound {i} is not acceptable")
+            if ub_types[i] not in acceptable_types:
+                raise ValueError(f"Upper bound type {ub_types[i]} for Upper bound {i} is not acceptable")
+        
+        if lb_types != ub_types:
+            warnings.warn("Warning: lower_bounds and upper_bounds are of different types")
+            warnings.warn("Keeping the least restrictive type")
+            for i in range(self.num_params):
+                if lb_types[i] == float or ub_types[i] == float:
+                    self.lower_bounds[i] = float(self.lower_bounds[i])
+                    self.upper_bounds[i] = float(self.upper_bounds[i])
+                elif lb_types[i] == int or ub_types[i] == int:
+                    self.upper_bounds[i] = int(self.upper_bounds[i])
+                    self.lower_bounds[i] = int(self.lower_bounds[i])
+
+    def insert_nodes(self, param_list, is_bool=False):
+        indices = [i for i in range(len(param_list) - 1)]
+        is_int = any(isinstance(x, int) for x in param_list)
+        is_float = any(isinstance(x, float) for x in param_list)
+        if is_float:
+            new_values = [(param_list[idx] + param_list[idx + 1]) / 2 for idx in indices]
+        elif is_int:
+            new_values = [math.floor((param_list[idx] + param_list[idx + 1]) / 2) for idx in indices]
+        for new_value in new_values:
+            for idx, val in enumerate(param_list[:-1]):
+                if val <= new_value < param_list[idx + 1]:
+                    if is_bool:
+                        param_list.insert(idx + 1, bool(new_value))
+                    else:
+                        param_list.insert(idx + 1, new_value)
+                    break
+        return param_list
+    
+    def get_nodes(self):
+        all_nodes = [[self.lower_bounds[idx], self.upper_bounds[idx]] for idx in range(self.num_params)]
+        indices_with_bool = [idx for idx, node in enumerate(all_nodes) if any(isinstance(val, bool) for val in node)]
+        all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(val, bool) and not val else val for val in node] for node in all_nodes]
+
+        if self.num_particles < self.num_params:
+            warnings.warn(f"Warning: not enough particles, now you are running with {len(all_nodes[0])} particles")
+
+        particle_count = len(all_nodes[0])
+        while particle_count < self.num_particles:
+            for idx in range(self.num_params):
+                nodes = all_nodes[idx]
+                len_before = len(nodes)
+                if idx in indices_with_bool:
+                    nodes = self.insert_nodes(nodes, is_bool=True)
+                else:
+                    nodes = self.insert_nodes(nodes)
+                len_after = len(nodes)
+                particle_count += (len_after - len_before) / self.num_params
+        for idx in indices_with_bool:
+            all_nodes[idx][0] = False
+            all_nodes[idx][len(all_nodes[idx]) - 1] = True
+        combinations = itertools.product(*all_nodes)
+        return np.array([np.array(combo, dtype=object) for combo in combinations])
+
     def spread_particles(self):
-        mesh = np.meshgrid(*[np.linspace(l_b, u_b, num=int(self.num_particles**(1/self.num_params)))
-                             for l_b, u_b in zip(self.lower_bounds, self.upper_bounds)])
-        points = np.vstack([dim.flatten() for dim in mesh]).T
-        [particle.set_position(point)
-         for particle, point in zip(self.particles, points)]
+        positions = self.get_nodes()
+        np.random.shuffle(positions)
+        [particle.set_position(point) for particle, point in zip(self.particles, positions)]
 
     def save_attributes(self):
         """
