@@ -126,6 +126,7 @@ class Particle:
             self.best_fitness = self.fitness
             self.best_position = self.position
 
+
 class MOPSO(Optimizer):
     """
     Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
@@ -201,14 +202,15 @@ class MOPSO(Optimizer):
         self.num_particles = num_particles
 
         if len(lower_bounds) != len(upper_bounds):
-            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths. The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
-            
+            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths. The lowest length ({
+                          min(len(lower_bounds), len(upper_bounds))}) is taken.")
+
         self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
-        
-        self.check_types()       
-        
+
+        self.check_types()
+
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
@@ -219,7 +221,7 @@ class MOPSO(Optimizer):
 
         if initial_particles_position == 'spread':
             self.spread_particles()
-            
+
         if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
              for particle in self.particles]
@@ -231,21 +233,26 @@ class MOPSO(Optimizer):
                 positions = []
                 for i in range(self.num_params):
                     if type(self.lower_bounds[i]) == int:
-                        position = Randomizer.rng.integers(self.lower_bounds[i], self.upper_bounds[i])
+                        position = Randomizer.rng.integers(
+                            self.lower_bounds[i], self.upper_bounds[i])
                     elif type(self.lower_bounds[i]) == float:
-                        position = Randomizer.rng.uniform(self.lower_bounds[i], self.upper_bounds[i])
+                        position = Randomizer.rng.uniform(
+                            self.lower_bounds[i], self.upper_bounds[i])
                     elif type(self.lower_bounds[i]) == bool:
                         position = Randomizer.rng.choice([True, False])
                     else:
-                        raise ValueError(f"Type {type(self.lower_bounds[i])} not supported")
+                        raise ValueError(
+                            f"Type {type(self.lower_bounds[i])} not supported")
                     positions.append(position)
                 return np.array(positions)
-                
-            [particle.set_position(random_position()) for particle in self.particles] 
-            
+
+            [particle.set_position(random_position())
+             for particle in self.particles]
+
         elif initial_particles_position == 'gaussian':
             if default_point is None:
-                default_point = np.mean([self.lower_bounds, self.upper_bounds], axis=0)
+                default_point = np.mean(
+                    [self.lower_bounds, self.upper_bounds], axis=0)
             else:
                 default_point = np.array(default_point)
                 self.particles[0].set_position(default_point)
@@ -253,15 +260,17 @@ class MOPSO(Optimizer):
             a_trunc = np.array(self.lower_bounds)
             b_trunc = np.array(self.upper_bounds)
             loc = default_point
-            scale = (np.array(self.upper_bounds) - np.array(self.lower_bounds))/4
+            scale = (np.array(self.upper_bounds) -
+                     np.array(self.lower_bounds))/4
             a, b = (a_trunc - loc) / scale, (b_trunc - loc) / scale
-            [particle.set_position(stats.truncnorm.rvs(a, b, loc, scale)) for particle in self.particles]
+            [particle.set_position(stats.truncnorm.rvs(a, b, loc, scale))
+             for particle in self.particles]
 
             for particle in self.particles:
-                for i in  range(self.num_params):
+                for i in range(self.num_params):
                     if type(lower_bounds[i]) == int or type(lower_bounds[i]) == bool:
                         particle.position[i] = int(round(particle.position[i]))
-            
+
         elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
@@ -273,17 +282,20 @@ class MOPSO(Optimizer):
     def check_types(self):
         lb_types = [type(lb) for lb in self.lower_bounds]
         ub_types = [type(ub) for ub in self.upper_bounds]
-        
+
         acceptable_types = [int, float, bool]
-        
+
         for i in range(self.num_params):
             if lb_types[i] not in acceptable_types:
-                raise ValueError(f"Lower bound type {lb_types[i]} for Lower bound {i} is not acceptable")
+                raise ValueError(f"Lower bound type {lb_types[i]} for Lower bound {
+                                 i} is not acceptable")
             if ub_types[i] not in acceptable_types:
-                raise ValueError(f"Upper bound type {ub_types[i]} for Upper bound {i} is not acceptable")
-        
+                raise ValueError(f"Upper bound type {ub_types[i]} for Upper bound {
+                                 i} is not acceptable")
+
         if lb_types != ub_types:
-            warnings.warn("Warning: lower_bounds and upper_bounds are of different types")
+            warnings.warn(
+                "Warning: lower_bounds and upper_bounds are of different types")
             warnings.warn("Keeping the least restrictive type")
             for i in range(self.num_params):
                 if lb_types[i] == float or ub_types[i] == float:
@@ -298,9 +310,11 @@ class MOPSO(Optimizer):
         is_int = any(isinstance(x, int) for x in param_list)
         is_float = any(isinstance(x, float) for x in param_list)
         if is_float:
-            new_values = [(param_list[idx] + param_list[idx + 1]) / 2 for idx in indices]
+            new_values = [(param_list[idx] + param_list[idx + 1]
+                           ) / 2 for idx in indices]
         elif is_int:
-            new_values = [math.floor((param_list[idx] + param_list[idx + 1]) / 2) for idx in indices]
+            new_values = [math.floor(
+                (param_list[idx] + param_list[idx + 1]) / 2) for idx in indices]
         for new_value in new_values:
             for idx, val in enumerate(param_list[:-1]):
                 if val <= new_value < param_list[idx + 1]:
@@ -310,14 +324,18 @@ class MOPSO(Optimizer):
                         param_list.insert(idx + 1, new_value)
                     break
         return param_list
-    
+
     def get_nodes(self):
-        all_nodes = [[self.lower_bounds[idx], self.upper_bounds[idx]] for idx in range(self.num_params)]
-        indices_with_bool = [idx for idx, node in enumerate(all_nodes) if any(isinstance(val, bool) for val in node)]
-        all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(val, bool) and not val else val for val in node] for node in all_nodes]
+        all_nodes = [[self.lower_bounds[idx], self.upper_bounds[idx]]
+                     for idx in range(self.num_params)]
+        indices_with_bool = [idx for idx, node in enumerate(
+            all_nodes) if any(isinstance(val, bool) for val in node)]
+        all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(
+            val, bool) and not val else val for val in node] for node in all_nodes]
 
         if self.num_particles < self.num_params:
-            warnings.warn(f"Warning: not enough particles, now you are running with {len(all_nodes[0])} particles")
+            warnings.warn(f"Warning: not enough particles, now you are running with {
+                          len(all_nodes[0])} particles")
 
         particle_count = len(all_nodes[0])
         while particle_count < self.num_particles:
@@ -339,7 +357,8 @@ class MOPSO(Optimizer):
     def spread_particles(self):
         positions = self.get_nodes()
         np.random.shuffle(positions)
-        [particle.set_position(point) for particle, point in zip(self.particles, positions)]
+        [particle.set_position(point) for particle,
+         point in zip(self.particles, positions)]
 
     def save_attributes(self):
         """
@@ -494,17 +513,21 @@ class MOPSO(Optimizer):
         # Given the array of particles with n fitness values, pareto_fitness is an array with n rows of num_particles columns
         pareto_lenght = len(self.pareto_front)
         particles = self.pareto_front + self.particles
-        particle_fitnesses = np.array([particle.fitness for particle in self.pareto_front]+ [particle.fitness for particle in self.particles])
+        particle_fitnesses = np.array([particle.fitness for particle in self.pareto_front] + [
+                                      particle.fitness for particle in self.particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
-        
+
         if self.incremental_pareto:
-            self.pareto_front = [copy.copy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
+            self.pareto_front = [copy.copy(particles[i]) for i in range(
+                len(particles)) if not dominanted[i]]
         else:
-            self.pareto_front = [copy.copy(particles[i]) for i in range(pareto_lenght, len(particles)) if not dominanted[i]]
-            
+            self.pareto_front = [copy.copy(particles[i]) for i in range(
+                pareto_lenght, len(particles)) if not dominanted[i]]
+
         crowding_distances = self.calculate_crowding_distance(
             self.pareto_front)
-        self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
+        self.pareto_front.sort(
+            key=lambda x: crowding_distances[x], reverse=True)
 
     def calculate_crowding_distance(self, pareto_front):
         """
@@ -546,6 +569,8 @@ class MOPSO(Optimizer):
             point_to_distance[point] = distances[i]
 
         return point_to_distance
+
+
 @njit
 def get_dominated(particles, pareto_lenght):
     dominated_particles = np.zeros(len(particles))
@@ -553,8 +578,8 @@ def get_dominated(particles, pareto_lenght):
         dominated = False
         for j in range(pareto_lenght, len(particles)):
             if np.any(particles[i] > particles[j]) and \
-                np.all(particles[i] >= particles[j]):
+                    np.all(particles[i] >= particles[j]):
                 dominated = True
                 break
         dominated_particles[i] = dominated
-    return dominated_particles    
+    return dominated_particles

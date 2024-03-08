@@ -12,26 +12,28 @@ num_params = 30
 lb = [0.] * num_params
 ub = [1.] * num_params
 
+
 def zdt2_objective1(x):
     return x[0]
+
 
 def zdt2_objective2(x):
     f1 = x[0]
     g = 1.0 + 9.0 * sum(x[1:]) / (len(x) - 1)
-    h = 1.0 - np.power((f1 *1.0 / g),2)
+    h = 1.0 - np.power((f1 * 1.0 / g), 2)
     f2 = g * h
     return f2
 
-optimizer.FileManager.working_dir="tmp/zdt2/"
+
+optimizer.FileManager.working_dir = "tmp/zdt2/"
 optimizer.FileManager.loading_enabled = False
 optimizer.FileManager.saving_enabled = True
 
 objective = optimizer.ElementWiseObjective([zdt2_objective1, zdt2_objective2])
 
-pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub, 
-            num_particles=num_agents,
-            inertia_weight=0.4, cognitive_coefficient=0.1, social_coefficient=2
-            , initial_particles_position='random')
+pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
+                      num_particles=num_agents,
+                      inertia_weight=0.4, cognitive_coefficient=0.1, social_coefficient=2, initial_particles_position='random')
 
 # run the optimization algorithm
 pso.optimize(num_iterations)
@@ -49,4 +51,3 @@ plt.scatter(real_x, real_y, s=5, c='red')
 plt.scatter(pareto_x, pareto_y, s=5)
 
 plt.savefig('tmp/pf.png')
-

@@ -12,34 +12,39 @@ num_agents = 100
 num_iterations = 10
 num_params = 1
 
+
 def f1(x):
     return x**2
 
+
 def f2(x):
-    return (x - 2) ** 2  
+    return (x - 2) ** 2
+
 
 def f(params):
     return [[f1(params[i][0]), f2(params[i][0])] for i in range(len(params))]
 
-optimizer.FileManager.working_dir="tmp/schaffer/"
+
+optimizer.FileManager.working_dir = "tmp/schaffer/"
 optimizer.FileManager.loading_enabled = True
 
 objective = optimizer.Objective([f])
 
-pso = optimizer.MOPSO(objective=objective,lower_bounds=lb, upper_bounds=ub, 
-            num_particles=num_agents,
-            inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1)
+pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
+                      num_particles=num_agents,
+                      inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1)
 
 # run the optimization algorithm
 pso.optimize()
 
-metrics = [pd.read_csv('tmp/schaffer/history/iteration' + str(i) + '.csv', 
-                       header=None, 
+metrics = [pd.read_csv('tmp/schaffer/history/iteration' + str(i) + '.csv',
+                       header=None,
                        usecols=[num_params, num_params + 1]).transpose().to_numpy()
            for i in range(num_iterations)]
 
 
 fig, ax = plt.subplots()
+
 
 def animate(i):
     fig.clear()
@@ -49,6 +54,7 @@ def animate(i):
     ax.scatter(metrics[i][0], metrics[i][1], c='red', s=10)
     ax.set_title(str(i))
 
-ani=animation.FuncAnimation(fig, animate, interval=200, frames=range(num_iterations))
-ani.save('tmp/schaffer/checkpoint/metrics.gif', writer='pillow')
 
+ani = animation.FuncAnimation(
+    fig, animate, interval=200, frames=range(num_iterations))
+ani.save('tmp/schaffer/checkpoint/metrics.gif', writer='pillow')

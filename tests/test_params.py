@@ -8,29 +8,36 @@ ub2 = [2., 2, 1.]
 
 print([type(lb) for lb in lb1])
 print([type(lb) for lb in ub1])
+
+
 def always_true(x):
-  return True
+    return True
+
 
 objective = optimizer.Objective([always_true])
 
-pso = optimizer.MOPSO(objective=objective, lower_bounds=lb1, upper_bounds=ub1, initial_particles_position='random')
+pso = optimizer.MOPSO(objective=objective, lower_bounds=lb1,
+                      upper_bounds=ub1, initial_particles_position='random')
 
 print([type(lb) for lb in pso.lower_bounds])
 print([type(ub) for ub in pso.upper_bounds])
 
-pso = optimizer.MOPSO(objective=objective, lower_bounds=lb1, upper_bounds=ub2, initial_particles_position='random')
+pso = optimizer.MOPSO(objective=objective, lower_bounds=lb1,
+                      upper_bounds=ub2, initial_particles_position='random')
 
 try:
-  pso = optimizer.MOPSO(objective=objective, lower_bounds=lb2, upper_bounds=ub1 )
+    pso = optimizer.MOPSO(objective=objective,
+                          lower_bounds=lb2, upper_bounds=ub1)
 except ValueError as e:
-  print(e)
-  
+    print(e)
+
 print([type(lb) for lb in pso.lower_bounds])
 print([type(ub) for ub in pso.upper_bounds])
 
 lbt = [0., 0, False]
 ubt = [1., 5, True]
 
-psot = optimizer.MOPSO(objective=objective, lower_bounds=lbt, upper_bounds=ubt, initial_particles_position='spread')
+psot = optimizer.MOPSO(objective=objective, lower_bounds=lbt,
+                       upper_bounds=ubt, initial_particles_position='spread')
 
 print("\n".join([f"{p.position}" for p in psot.particles]))
