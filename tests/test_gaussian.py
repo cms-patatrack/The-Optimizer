@@ -7,10 +7,10 @@ num_agents = 500
 num_iterations = 200
 num_params = 2
 
-lb = [0., 0.]
-ub = [10., 5.]
+lb = [0., 0]
+ub = [10., 5]
 
-default_point = [3., 2.]
+default_point = [3., 2]
 
 def always_true(x):
   return True

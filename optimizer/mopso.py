@@ -249,13 +249,19 @@ class MOPSO(Optimizer):
             else:
                 default_point = np.array(default_point)
                 self.particles[0].set_position(default_point)
+            # See scipy truncnorm rvs documentation for more information
             a_trunc = np.array(self.lower_bounds)
             b_trunc = np.array(self.upper_bounds)
             loc = default_point
             scale = (np.array(self.upper_bounds) - np.array(self.lower_bounds))/4
             a, b = (a_trunc - loc) / scale, (b_trunc - loc) / scale
             [particle.set_position(stats.truncnorm.rvs(a, b, loc, scale)) for particle in self.particles]
-                
+
+            for particle in self.particles:
+                for i in  range(self.num_params):
+                    if type(lower_bounds[i]) == int or type(lower_bounds[i]) == bool:
+                        particle.position[i] = int(round(particle.position[i]))
+            
         elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
