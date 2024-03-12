@@ -70,7 +70,7 @@ class Particle:
             social_coefficient (float): Social coefficient controlling the impact of global best
                                         (default is 1).
         """
-        leader = Randomizer.rng.choice(pareto_front[:int(self.num_particles)])
+        leader = Randomizer.rng.choice(pareto_front)
         cognitive_random = Randomizer.rng.uniform(0, 1)
         social_random = Randomizer.rng.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
