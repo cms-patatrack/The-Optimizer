@@ -202,9 +202,8 @@ class MOPSO(Optimizer):
         self.num_particles = num_particles
 
         if len(lower_bounds) != len(upper_bounds):
-            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths. The lowest length ({
-                          min(len(lower_bounds), len(upper_bounds))}) is taken.")
-
+            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths."
+                          f"The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
         self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
@@ -287,11 +286,11 @@ class MOPSO(Optimizer):
 
         for i in range(self.num_params):
             if lb_types[i] not in acceptable_types:
-                raise ValueError(f"Lower bound type {lb_types[i]} for Lower bound {
-                                 i} is not acceptable")
+                raise ValueError(f"Lower bound type {lb_types[i]} for "
+                                 f"Lower bound {i} is not acceptable")
             if ub_types[i] not in acceptable_types:
-                raise ValueError(f"Upper bound type {ub_types[i]} for Upper bound {
-                                 i} is not acceptable")
+                raise ValueError(f"Upper bound type {ub_types[i]} for "
+                                 f"Upper bound {i} is not acceptable")
 
         if lb_types != ub_types:
             warnings.warn(
