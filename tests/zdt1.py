@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import os
 
 
 num_agents = 100
@@ -52,4 +53,6 @@ real_y = 1-np.sqrt(real_x)
 plt.scatter(real_x, real_y, s=5, c='red')
 plt.scatter(pareto_x, pareto_y, s=5)
 
+if not os.path.exists('tmp'):
+    os.makedirs('tmp')
 plt.savefig('tmp/pf.png')
