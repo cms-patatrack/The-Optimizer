@@ -17,7 +17,7 @@ This module contains two classes:
 Both classes are designed to be used in conjunction to perform the MOPSO optimization process and
 find the Pareto front of non-dominated solutions.
 """
-import copy
+from copy import copy
 import itertools
 import math
 import numpy as np
@@ -514,15 +514,14 @@ class MOPSO(Optimizer):
         # Given the array of particles with n fitness values, pareto_fitness is an array with n rows of num_particles columns
         pareto_lenght = len(self.pareto_front)
         particles = self.pareto_front + self.particles
-        particle_fitnesses = np.array([particle.fitness for particle in self.pareto_front] + [
-                                      particle.fitness for particle in self.particles])
+        particle_fitnesses = np.array([particle.fitness for particle in particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
 
         if self.incremental_pareto:
-            self.pareto_front = [copy.copy(particles[i]) for i in range(
+            self.pareto_front = [copy(particles[i]) for i in range(
                 len(particles)) if not dominanted[i]]
         else:
-            self.pareto_front = [copy.copy(particles[i]) for i in range(
+            self.pareto_front = [copy(particles[i]) for i in range(
                 pareto_lenght, len(particles)) if not dominanted[i]]
 
         crowding_distances = self.calculate_crowding_distance(
