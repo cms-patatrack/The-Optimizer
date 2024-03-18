@@ -218,10 +218,19 @@ class MOPSO(Optimizer):
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
         if initial_particles_position == 'spread':
-            logger.warning(f"Initial distribution set to 'random'.")
-            initial_particles_position = 'random'
-            # self.spread_particles()
-
+            if self.num_params > 20:
+                logger.warning("Spread initialization is not recommended for more than 20 parameters." +
+                              "The initialization will be done with random positions.")
+                initial_particles_position = 'random'
+            elif self.num_particles < 2**self.num_params:
+                logger.warning("Spread initialization is not recommended for less particles than 2^num_params." +
+                               f"At least {2**self.num_params} particles are recommended." + 
+                               f"{self.num_particles} particles are used." +
+                              "The initialization will be done with random positions.")
+                initial_particles_position = 'random'
+            else:
+                self.spread_particles()
+            
         if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
              for particle in self.particles]
@@ -229,6 +238,7 @@ class MOPSO(Optimizer):
             [particle.set_position(self.upper_bounds)
              for particle in self.particles]
         elif initial_particles_position == 'random':
+            logger.debug("Random initialization")
             def random_position():
                 positions = []
                 for i in range(self.num_params):
@@ -248,6 +258,7 @@ class MOPSO(Optimizer):
 
             [particle.set_position(random_position())
              for particle in self.particles]
+            logger.debug("Random initialization done")
 
         elif initial_particles_position == 'gaussian':
             if default_point is None:
@@ -307,7 +318,7 @@ class MOPSO(Optimizer):
                     self.upper_bounds[i] = int(self.upper_bounds[i])
                     self.lower_bounds[i] = int(self.lower_bounds[i])
 
-    def insert_nodes(self, param_list, is_bool=False):
+    def insert_nodes(self, param_list):
         indices = [i for i in range(len(param_list) - 1)]
         is_int = any(isinstance(x, int) for x in param_list)
         is_float = any(isinstance(x, float) for x in param_list)
@@ -334,18 +345,8 @@ class MOPSO(Optimizer):
         
         bounds = list(zip(self.lower_bounds, self.upper_bounds))
         all_nodes = ndcube(*bounds)
-        print(len(all_nodes))
-        exit()
-        indices_with_bool = [idx for idx, node in enumerate(
-            all_nodes) if any(isinstance(val, bool) for val in node)]
-        all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(
-            val, bool) and not val else val for val in node] for node in all_nodes]
 
-        if self.num_particles < self.num_params:
-            logger.warning(f"Warning: not enough particles, now you are running with {len(all_nodes[0])} particles")
-
-        particle_count = len(all_nodes[0])
-        while particle_count < self.num_particles:
+        while len(all_nodes) < self.num_particles:
             for idx in range(self.num_params):
                 nodes = all_nodes[idx]
                 len_before = len(nodes)
