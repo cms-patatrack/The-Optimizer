@@ -191,7 +191,7 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=True, initial_particles_position='spread', default_point=None):
+                 incremental_pareto=True, initial_particles_position='random', default_point=None):
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -219,7 +219,9 @@ class MOPSO(Optimizer):
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
         if initial_particles_position == 'spread':
-            self.spread_particles()
+            warnings.warn(f"Initial distribution set to 'random'.")
+            initial_particles_position = 'random'
+            # self.spread_particles()
 
         if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
