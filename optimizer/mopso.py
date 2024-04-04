@@ -433,8 +433,6 @@ class MOPSO(Optimizer):
         self.inertia_weight = pso_attributes['inertia_weight']
         self.cognitive_coefficient = pso_attributes['cognitive_coefficient']
         self.social_coefficient = pso_attributes['social_coefficient']
-        self.max_iter_no_improv = pso_attributes['max_iter_no_improv']
-        self.optimization_mode = pso_attributes['optimization_mode']
         self.incremental_pareto = pso_attributes['incremental_pareto']
         self.iteration = pso_attributes['iteration']
 
