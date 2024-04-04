@@ -22,8 +22,7 @@ import itertools
 import math
 import numpy as np
 import math
-import warnings
-from optimizer import Optimizer, FileManager, Randomizer
+from optimizer import Optimizer, FileManager, Randomizer, Logger
 from numba import njit, jit
 import scipy.stats as stats
 
@@ -198,11 +197,11 @@ class MOPSO(Optimizer):
                 self.load_checkpoint()
                 return
             except FileNotFoundError as e:
-                print("Checkpoint not found. Fallback to standard construction.")
+                Logger("Checkpoint not found. Fallback to standard construction.")
         self.num_particles = num_particles
 
         if len(lower_bounds) != len(upper_bounds):
-            warnings.warn(f"Warning: lower_bounds and upper_bounds have different lengths."
+            Logger.warning(f"Warning: lower_bounds and upper_bounds have different lengths."
                           f"The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
         self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
@@ -219,7 +218,7 @@ class MOPSO(Optimizer):
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
         if initial_particles_position == 'spread':
-            warnings.warn(f"Initial distribution set to 'random'.")
+            Logger.warning(f"Initial distribution set to 'random'.")
             initial_particles_position = 'random'
             # self.spread_particles()
 
@@ -297,9 +296,9 @@ class MOPSO(Optimizer):
                                  f"Upper bound {i} is not acceptable")
 
         if lb_types != ub_types:
-            warnings.warn(
+            Logger.warning(
                 "Warning: lower_bounds and upper_bounds are of different types")
-            warnings.warn("Keeping the least restrictive type")
+            Logger.warning("Keeping the least restrictive type")
             for i in range(self.num_params):
                 if lb_types[i] == float or ub_types[i] == float:
                     self.lower_bounds[i] = float(self.lower_bounds[i])
@@ -329,16 +328,21 @@ class MOPSO(Optimizer):
         return param_list
 
     def get_nodes(self):
-        all_nodes = [[self.lower_bounds[idx], self.upper_bounds[idx]]
-                     for idx in range(self.num_params)]
+        
+        def ndcube(*args):
+            return list(itertools.product(*map(lambda x: [x[0], x[1]], args)))
+        
+        bounds = list(zip(self.lower_bounds, self.upper_bounds))
+        all_nodes = ndcube(*bounds)
+        print(len(all_nodes))
+        exit()
         indices_with_bool = [idx for idx, node in enumerate(
             all_nodes) if any(isinstance(val, bool) for val in node)]
         all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(
             val, bool) and not val else val for val in node] for node in all_nodes]
 
         if self.num_particles < self.num_params:
-            warnings.warn(f"Warning: not enough particles, now you are running with {
-                          len(all_nodes[0])} particles")
+            Logger.warning(f"Warning: not enough particles, now you are running with {len(all_nodes[0])} particles")
 
         particle_count = len(all_nodes[0])
         while particle_count < self.num_particles:
