@@ -197,7 +197,9 @@ class MOPSO(Optimizer):
                 self.load_checkpoint()
                 return
             except FileNotFoundError as e:
-                Logger("Checkpoint not found. Fallback to standard construction.")
+                Logger.warning("Checkpoint not found. Fallback to standard construction.")
+        else:
+            Logger.debug("Loading disabled. Starting standard construction.")
         self.num_particles = num_particles
 
         if len(lower_bounds) != len(upper_bounds):
@@ -217,8 +219,10 @@ class MOPSO(Optimizer):
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
+        Logger.debug(f"Setting initial particles position")
+        
         if initial_particles_position == 'spread':
-            Logger.warning(f"Initial distribution set to 'random'.")
+            Logger.warning(f"Initial distribution forced to 'random'.")
             initial_particles_position = 'random'
             # self.spread_particles()
 
@@ -297,7 +301,7 @@ class MOPSO(Optimizer):
 
         if lb_types != ub_types:
             Logger.warning(
-                "Warning: lower_bounds and upper_bounds are of different types")
+                "lower_bounds and upper_bounds are of different types")
             Logger.warning("Keeping the least restrictive type")
             for i in range(self.num_params):
                 if lb_types[i] == float or ub_types[i] == float:
@@ -375,6 +379,7 @@ class MOPSO(Optimizer):
         Parameters:
             checkpoint_dir (str): Path to the folder where the json file is saved.
         """
+        Logger.debug("Saving PSO attributes")
         pso_attributes = {
             'lower_bounds': self.lower_bounds,
             'upper_bounds': self.upper_bounds,
@@ -403,6 +408,7 @@ class MOPSO(Optimizer):
         Parameters:
             checkpoint_dir (str): Path to the folder where the csv files are saved.
         """
+        Logger.debug("Saving PSO state")
         FileManager.save_csv([np.concatenate([particle.position,
                                               particle.velocity,
                                               particle.best_position,
@@ -423,6 +429,8 @@ class MOPSO(Optimizer):
             num_additional_iterations: Number of additional iterations to run. 
         """
         # load saved data
+        Logger.debug("Loading checkpoint")
+        
         pso_attributes = FileManager.load_json(
             'checkpoint/pso_attributes.json')
         individual_states = FileManager.load_csv(
@@ -430,6 +438,7 @@ class MOPSO(Optimizer):
         pareto_front = FileManager.load_csv('checkpoint/pareto_front.csv')
 
         # restore pso attributes
+        Logger.debug("Restoring PSO attributes")
         self.lower_bounds = pso_attributes['lower_bounds']
         self.upper_bounds = pso_attributes['upper_bounds']
         self.num_particles = pso_attributes['num_particles']
@@ -441,6 +450,7 @@ class MOPSO(Optimizer):
         self.iteration = pso_attributes['iteration']
 
         # restore particles
+        Logger.debug("Restoring particles")
         self.particles = []
         for i in range(self.num_particles):
             particle = Particle(self.lower_bounds, self.upper_bounds,
@@ -460,6 +470,7 @@ class MOPSO(Optimizer):
             self.particles.append(particle)
 
         # restore pareto front
+        Logger.debug("Restoring pareto front")
         self.pareto_front = []
         for i in range(len(pareto_front)):
             particle = Particle(self.lower_bounds, self.upper_bounds,
@@ -472,7 +483,7 @@ class MOPSO(Optimizer):
                                best_fitness=None)
             self.pareto_front.append(particle)
 
-    def optimize(self, num_iterations=100, max_iter_no_improv=None):
+    def optimize(self, num_iterations=100):
         """
         Perform the MOPSO optimization process and return the Pareto front of non-dominated
         solutions. If `history_dir` is specified, the position and fitness of all particles 
@@ -486,7 +497,9 @@ class MOPSO(Optimizer):
         Returns:
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
+        Logger.info(f"Starting MOPSO optimization with {num_iterations} iterations")
         for _ in range(num_iterations):
+            Logger.debug(f"Iteration {self.iteration}")
             optimization_output = self.objective.evaluate(
                 [particle.position for particle in self.particles])
             [particle.set_fitness(optimization_output[p_id])
@@ -505,7 +518,7 @@ class MOPSO(Optimizer):
                 particle.update_position(self.lower_bounds, self.upper_bounds)
 
             self.iteration += 1
-
+        Logger.info("MOPSO optimization finished")
         self.save_attributes()
         self.save_state()
 
@@ -516,6 +529,7 @@ class MOPSO(Optimizer):
         Update the Pareto front of non-dominated solutions across all iterations.
         """
         # Given the array of particles with n fitness values, pareto_fitness is an array with n rows of num_particles columns
+        Logger.debug("Updating Pareto front")
         pareto_lenght = len(self.pareto_front)
         particles = self.pareto_front + self.particles
         particle_fitnesses = np.array([particle.fitness for particle in particles])
@@ -527,7 +541,7 @@ class MOPSO(Optimizer):
         else:
             self.pareto_front = [copy(particles[i]) for i in range(
                 pareto_lenght, len(particles)) if not dominanted[i]]
-
+        Logger.debug(f"New pareto front size: {len(self.pareto_front)}")
         crowding_distances = self.calculate_crowding_distance(
             self.pareto_front)
         self.pareto_front.sort(
