@@ -485,7 +485,7 @@ class MOPSO(Optimizer):
         for _ in range(num_iterations):
             optimization_output = self.objective.evaluate(
                 [particle.position for particle in self.particles])
-            [particle.set_fitness(optimization_output[:, p_id])
+            [particle.set_fitness(optimization_output[p_id])
              for p_id, particle in enumerate(self.particles)]
             FileManager.save_csv([np.concatenate([particle.position, np.ravel(
                                  particle.fitness)]) for particle in self.particles],

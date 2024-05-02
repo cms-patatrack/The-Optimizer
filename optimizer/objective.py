@@ -11,7 +11,7 @@ class Objective():
         pass
 
     def evaluate(self, items):
-        return np.array([objective_function(items) for objective_function in self.objective_functions])
+        return np.array([objective_function(items) for objective_function in self.objective_functions]).T
 
     def type(self):
         return self.__class__.__name__
@@ -22,7 +22,7 @@ class ElementWiseObjective(Objective):
         super().__init__(objective_functions, num_objectives)
 
     def evaluate(self, items):
-        return np.array([[obj_func(item) for item in items] for obj_func in self.objective_functions])
+        return np.array([[obj_func(item) for obj_func in self.objective_functions] for item in items] )
 
 
 class BatchObjective(Objective):
