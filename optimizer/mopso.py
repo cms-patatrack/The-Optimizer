@@ -103,7 +103,8 @@ class Particle:
             fitness (numpy.ndarray): The fitness values of the particle for each objective.
         """
         self.fitness = fitness
-        self.update_best()
+        found_new_best = self.update_best()
+        return found_new_best
 
     def set_position(self, position):
         self.position = position
@@ -124,6 +125,8 @@ class Particle:
         if np.all(self.fitness <= self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
+            return True
+        return False
 
 
 class MOPSO(Optimizer):
@@ -498,12 +501,17 @@ class MOPSO(Optimizer):
             list: List of Particle objects representing the Pareto front of non-dominated solutions.
         """
         Logger.info(f"Starting MOPSO optimization with {num_iterations} iterations")
-        for _ in range(num_iterations):
+        useful_evaluations = []
+        for iteration in range(num_iterations):
             Logger.debug(f"Iteration {self.iteration}")
             optimization_output = self.objective.evaluate(
-                [particle.position for particle in self.particles])
-            [particle.set_fitness(optimization_output[p_id])
+                [particle.position for particle in self.particles], iteration)
+            improving_evaluations = [particle.set_fitness(optimization_output[p_id])
              for p_id, particle in enumerate(self.particles)]
+            print([int(x) for x in improving_evaluations])
+            num_useful_evaluation = sum(improving_evaluations)            
+            Logger.debug(f"{num_useful_evaluation} out of {len(self.particles)} evaluations updated the personal best.")
+            useful_evaluations.append(improving_evaluations)
             FileManager.save_csv([np.concatenate([particle.position, np.ravel(
                                  particle.fitness)]) for particle in self.particles],
                                  'history/iteration' + str(self.iteration) + '.csv')
@@ -521,7 +529,7 @@ class MOPSO(Optimizer):
         Logger.info("MOPSO optimization finished")
         self.save_attributes()
         self.save_state()
-
+        FileManager.save_csv(useful_evaluations, 'useful_evaluations.csv')
         return self.pareto_front
 
     def update_pareto_front(self):

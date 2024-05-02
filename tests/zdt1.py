@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
 
-num_agents = 100
+num_agents = 50
 num_iterations = 200
 num_params = 30
 
@@ -30,9 +30,15 @@ optimizer.Randomizer.rng = np.random.default_rng(42)
 
 optimizer.FileManager.working_dir = "tmp/zdt1/"
 optimizer.FileManager.loading_enabled = False
-optimizer.FileManager.saving_enabled = False
+optimizer.FileManager.saving_enabled = True
 
-objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
+#open file useful_evaluation.csv and load as a evaluation_mask, a list of list of boolean,
+
+evaluation_mask = optimizer.FileManager.load_csv("useful_evaluations.csv")
+
+print(evaluation_mask)
+
+objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2], evaluation_mask=evaluation_mask)
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
