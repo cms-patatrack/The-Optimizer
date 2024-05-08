@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
 
-
 num_agents = 100
 num_iterations = 200
 num_params = 30
@@ -13,6 +12,7 @@ num_params = 30
 lb = [0.] * num_params
 ub = [1.] * num_params
 
+optimizer.Logger.setLevel('DEBUG')
 
 def zdt1_objective1(x):
     return x[0]
