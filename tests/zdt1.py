@@ -12,7 +12,7 @@ num_params = 30
 lb = [0.] * num_params
 ub = [1.] * num_params
 
-optimizer.Logger.setLevel('DEBUG')
+optimizer.Logger.setLevel('INFO')
 
 def zdt1_objective1(x):
     return x[0]

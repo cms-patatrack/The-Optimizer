@@ -300,6 +300,7 @@ class MOPSO(Optimizer):
         self.iteration += 1
         
     def optimize(self, num_iterations=100, max_iter_no_improv=None):
+        Logger.info("Starting MOPSO optimization")
         for _ in range(num_iterations):
             self.step()
         Logger.info("MOPSO optimization finished")
