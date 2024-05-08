@@ -22,7 +22,7 @@ class ElementWiseObjective(Objective):
         super().__init__(objective_functions, num_objectives)
 
     def evaluate(self, items):
-        return np.array([[obj_func(item) for obj_func in self.objective_functions] for item in items] )
+        return np.array([[obj_func(item) for obj_func in self.objective_functions] for item in items])
 
 
 class BatchObjective(Objective):

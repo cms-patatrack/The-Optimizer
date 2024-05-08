@@ -1,22 +1,3 @@
-"""
-mopso.py
-
-This module implements the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm,
-a heuristic optimization algorithm used to find the Pareto front of non-dominated solutions
-for multi-objective optimization problems.
-
-The MOPSO algorithm works by maintaining a population of particles, each representing a potential
-solution to the optimization problem. The particles are iteratively updated by considering their
-velocity and position in the search space, aiming to converge towards the Pareto front of the
-problem's solution space.
-
-This module contains two classes:
-    - Particle: Represents a particle in the MOPSO algorithm.
-    - MOPSO: Multi-Objective Particle Swarm Optimization algorithm.
-
-Both classes are designed to be used in conjunction to perform the MOPSO optimization process and
-find the Pareto front of non-dominated solutions.
-"""
 from copy import copy
 import itertools
 import math
@@ -29,23 +10,6 @@ import scipy.stats as stats
 
 
 class Particle:
-    """
-    Represents a particle in the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
-
-    Parameters:
-        lower_bound (numpy.ndarray): Lower bound for the particle's position.
-        upper_bound (numpy.ndarray): Upper bound for the particle's position.
-        num_objectives (int): Number of objectives in the optimization problem.
-
-    Attributes:
-        position (numpy.ndarray): Current position of the particle.
-        num_objectives (int): Number of objectives in the optimization problem.
-        velocity (numpy.ndarray): Current velocity of the particle.
-        best_position (numpy.ndarray): Best position the particle has visited.
-        best_fitness (numpy.ndarray): Best fitness values achieved by the particle.
-        fitness (numpy.ndarray): Current fitness values of the particle.
-    """
-
     def __init__(self, lower_bound, upper_bound, num_objectives, num_particles):
         self.position = np.asarray(lower_bound)
         self.num_objectives = num_objectives
@@ -58,18 +22,6 @@ class Particle:
     def update_velocity(self,
                         pareto_front, inertia_weight=0.5,
                         cognitive_coefficient=1, social_coefficient=1,):
-        """
-        Update the particle's velocity based on its best position and the global best position.
-
-        Parameters:
-            global_best_position (numpy.ndarray): Global best position in the swarm.
-            inertia_weight (float): Inertia weight controlling the impact of the previous velocity
-                                    (default is 0.5).
-            cognitive_coefficient (float): Cognitive coefficient controlling the impact of personal
-                                           best (default is 1).
-            social_coefficient (float): Social coefficient controlling the impact of global best
-                                        (default is 1).
-        """
         leader = Randomizer.rng.choice(pareto_front)
         cognitive_random = Randomizer.rng.uniform(0, 1)
         social_random = Randomizer.rng.uniform(0, 1)
@@ -80,13 +32,6 @@ class Particle:
         self.velocity = inertia_weight * self.velocity + cognitive + social
 
     def update_position(self, lower_bound, upper_bound):
-        """
-        Update the particle's position based on its current velocity and bounds.
-
-        Parameters:
-            lower_bound (numpy.ndarray): Lower bound for the particle's position.
-            upper_bound (numpy.ndarray): Upper bound for the particle's position.
-        """
         new_position = np.empty_like(self.position)
         for i in range(len(lower_bound)):
             if type(lower_bound[i]) == int or type(lower_bound[i]) == bool:
@@ -96,13 +41,6 @@ class Particle:
         self.position = np.clip(new_position, lower_bound, upper_bound)
 
     def set_fitness(self, fitness):
-        """
-        Set the fitness values of the particle and calls `update_best` method to update the
-        particle's fitness and best position.
-
-        Parameters:
-            fitness (numpy.ndarray): The fitness values of the particle for each objective.
-        """
         self.fitness = fitness
         self.update_best()
 
@@ -117,76 +55,12 @@ class Particle:
         self.best_fitness = best_fitness
 
     def update_best(self):
-        """
-        Update particle's fitness and best position
-        """
-        # if np.any(self.best_fitness == np.zeros(self.num_objectives)):
-        #     self.fitness = np.ones(self.num_objectives)
         if np.all(self.fitness <= self.best_fitness):
             self.best_fitness = self.fitness
             self.best_position = self.position
 
 
 class MOPSO(Optimizer):
-    """
-    Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
-
-    Parameters:
-        objective_functions (list): List of objective functions to be minimized.
-        lower_bound (numpy.ndarray): Lower bound for the particles' positions.
-        upper_bound (numpy.ndarray): Upper bound for the particles' positions.
-        num_particles (int): Number of particles in the swarm (default is 50).
-        inertia_weight (float): Inertia weight controlling the impact of the previous velocity
-                                (default is 0.5).
-        cognitive_coefficient (float): Cognitive coefficient controlling the impact of personal
-                                       best (default is 1).
-        social_coefficient (float): Social coefficient controlling the impact of global best
-                                    (default is 1).
-        num_iterations (int): Number of iterations for the optimization process (default is 100).
-        optimization_mode (str): Mode for updating particle fitness: 'individual' or 'global'
-                                 (default is 'individual').
-        max_iter_no_improv (int): Maximum number of iterations without improvement
-                                  (default is None).
-        num_objectives (int): Number of objectives in the optimization problem (default is None,
-                              calculated from objective_functions).
-        checkpoint_dir (str): Path to the folder where the a checkpoint is saved (optional). 
-                              If this is specified, the checkpoint will be restored 
-                              and the optimization will continue from this point.
-
-    Attributes:
-        objective_functions (list): List of objective functions to be minimized.
-        num_objectives (int): Number of objectives in the optimization problem.
-        num_particles (int): Number of particles in the swarm.
-        num_params (int): Number of parameters to optimize
-        lower_bounds (numpy.ndarray): Lower bound for the particles' positions.
-        upper_bounds (numpy.ndarray): Upper bound for the particles' positions.
-        inertia_weight (float): Inertia weight controlling the impact of the previous velocity.
-        cognitive_coefficient (float): Cognitive coefficient controlling the impact of
-                                       personal best.
-        social_coefficient (float): Social coefficient controlling the impact of global best.
-        num_iterations (int): Number of iterations for the optimization process.
-        max_iter_no_improv (int): Maximum number of iterations without improvement.
-        optimization_mode (str): Mode for updating particle fitness: 'individual' or 'global'.
-        particles (list): List of Particle objects representing the swarm.
-        global_best_position (numpy.ndarray): Global best position in the swarm.
-        global_best_fitness (list): Global best fitness values achieved in the swarm.
-        iteration (int): the current iteration
-        pareto_front (list): List of Particle objects representing the Pareto front of non-dominated 
-                             solutions across all iterations.
-        history (list): List to store the global best fitness values at each iteration.
-
-    Methods:
-        optimize():
-            Perform the MOPSO optimization process and return the Pareto front of non-dominated
-            solutions.
-        update_global_best():
-            Update the global best position and fitness based on the swarm's particles.
-        get_pareto_front():
-            Get the Pareto front of non-dominated solutions.
-        calculate_crowding_distance(pareto_front):
-            Calculate the crowding distance for particles in the Pareto front.
-    """
-
     def __init__(self,
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
@@ -265,7 +139,7 @@ class MOPSO(Optimizer):
             a, b = (a_trunc - loc) / scale, (b_trunc - loc) / scale
             [particle.set_position(stats.truncnorm.rvs(a, b, loc, scale))
              for particle in self.particles]
-            
+
             for particle in self.particles:
                 for i in range(self.num_params):
                     if type(lower_bounds[i]) == int or type(lower_bounds[i]) == bool:
@@ -277,7 +151,7 @@ class MOPSO(Optimizer):
 
         if default_point is not None:
             self.particles[0].set_position(default_point)
-            
+
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
         self.pareto_front = []
@@ -364,13 +238,6 @@ class MOPSO(Optimizer):
          point in zip(self.particles, positions)]
 
     def save_attributes(self):
-        """
-        Save PSO attributes in a json file, which can be loaded later to continue the optimization
-        from a checkpoint.
-
-        Parameters:
-            checkpoint_dir (str): Path to the folder where the json file is saved.
-        """
         pso_attributes = {
             'lower_bounds': self.lower_bounds,
             'upper_bounds': self.upper_bounds,
@@ -385,20 +252,6 @@ class MOPSO(Optimizer):
         FileManager.save_json(pso_attributes, "checkpoint/pso_attributes.json")
 
     def save_state(self):
-        """
-        Save the current state of PSO in csv files, which can be loaded later to continue the 
-        optimization from a checkpoint.
-        There will be 4 files:
-            - individual_states.csv: Containing the current state (position, velocity, 
-                                     best_position, best_fitness) of each particle
-            - global_states.csv: Containing the current state (global_best_position, 
-                                 global_best_fitness, iteration) of PSO.
-            - pareto_front.csv: Containing non-dominated solutions up until this point
-            - history.csv: Containing the best global fitness each iteration              
-
-        Parameters:
-            checkpoint_dir (str): Path to the folder where the csv files are saved.
-        """
         FileManager.save_csv([np.concatenate([particle.position,
                                               particle.velocity,
                                               particle.best_position,
@@ -411,13 +264,6 @@ class MOPSO(Optimizer):
                              'checkpoint/pareto_front.csv')
 
     def load_checkpoint(self):
-        """
-        Load a checkpoint in order to continue a previous run.            
-
-        Parameters:
-            checkpoint_dir (str): Path to the folder where the checkpoint is saved.
-            num_additional_iterations: Number of additional iterations to run. 
-        """
         # load saved data
         pso_attributes = FileManager.load_json(
             'checkpoint/pso_attributes.json')
@@ -469,19 +315,6 @@ class MOPSO(Optimizer):
             self.pareto_front.append(particle)
 
     def optimize(self, num_iterations=100, max_iter_no_improv=None):
-        """
-        Perform the MOPSO optimization process and return the Pareto front of non-dominated
-        solutions. If `history_dir` is specified, the position and fitness of all particles 
-        are saved every iteration. If `checkpoint_dir` is specified, a checkpoint will be 
-        saved at the end. The checkpoint can be loaded later to continue the optimization.
-
-        Parameters:
-            history_dir (str): Path to the folder where history is saved (optional).
-            checkpoint_dir (str): Path to the folder where checkpoint is saved (optional).
-
-        Returns:
-            list: List of Particle objects representing the Pareto front of non-dominated solutions.
-        """
         for _ in range(num_iterations):
             optimization_output = self.objective.evaluate(
                 [particle.position for particle in self.particles])
@@ -508,13 +341,10 @@ class MOPSO(Optimizer):
         return self.pareto_front
 
     def update_pareto_front(self):
-        """
-        Update the Pareto front of non-dominated solutions across all iterations.
-        """
-        # Given the array of particles with n fitness values, pareto_fitness is an array with n rows of num_particles columns
         pareto_lenght = len(self.pareto_front)
         particles = self.pareto_front + self.particles
-        particle_fitnesses = np.array([particle.fitness for particle in particles])
+        particle_fitnesses = np.array(
+            [particle.fitness for particle in particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
 
         if self.incremental_pareto:
@@ -530,16 +360,6 @@ class MOPSO(Optimizer):
             key=lambda x: crowding_distances[x], reverse=True)
 
     def calculate_crowding_distance(self, pareto_front):
-        """
-        Calculate the crowding distance for particles in the Pareto front.
-
-        Parameters:
-            pareto_front (list): List of Particle objects representing the Pareto front.
-
-        Returns:
-            dict: A dictionary with Particle objects as keys and their corresponding crowding
-                  distances as values.
-        """
         if len(pareto_front) == 0:
             return []
 
