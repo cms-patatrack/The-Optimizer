@@ -6,58 +6,7 @@ import math
 from optimizer import Optimizer, FileManager, Randomizer, Logger
 from numba import njit, jit
 import scipy.stats as stats
-
-
-class Particle:
-    def __init__(self, lower_bound, upper_bound, num_objectives, num_particles):
-        self.position = np.asarray(lower_bound)
-        self.num_objectives = num_objectives
-        self.num_particles = num_particles
-        self.velocity = np.zeros_like(self.position)
-        self.best_position = self.position
-        self.best_fitness = np.array([np.inf]*self.num_objectives)
-        self.fitness = np.ones(self.num_objectives)
-
-    def update_velocity(self,
-                        pareto_front, inertia_weight=0.5,
-                        cognitive_coefficient=1, social_coefficient=1,):
-        leader = Randomizer.rng.choice(pareto_front)
-        cognitive_random = Randomizer.rng.uniform(0, 1)
-        social_random = Randomizer.rng.uniform(0, 1)
-        cognitive = cognitive_coefficient * cognitive_random * \
-            (self.best_position - self.position)
-        social = social_coefficient * social_random * \
-            (leader.position - self.position)
-        self.velocity = inertia_weight * self.velocity + cognitive + social
-
-    def update_position(self, lower_bound, upper_bound):
-        new_position = np.empty_like(self.position)
-        for i in range(len(lower_bound)):
-            if type(lower_bound[i]) == int or type(lower_bound[i]) == bool:
-                new_position[i] = np.round(self.position[i] + self.velocity[i])
-            else:
-                new_position[i] = self.position[i] + self.velocity[i]
-        self.position = np.clip(new_position, lower_bound, upper_bound)
-
-    def set_fitness(self, fitness):
-        self.fitness = fitness
-        self.update_best()
-
-    def set_position(self, position):
-        self.position = position
-
-    def set_state(self, velocity, position, best_position, fitness, best_fitness):
-        self.velocity = velocity
-        self.position = position
-        self.best_position = best_position
-        self.fitness = fitness
-        self.best_fitness = best_fitness
-
-    def update_best(self):
-        if np.all(self.fitness <= self.best_fitness):
-            self.best_fitness = self.fitness
-            self.best_position = self.position
-
+from .particle import Particle
 
 class MOPSO(Optimizer):
     def __init__(self,
@@ -329,29 +278,33 @@ class MOPSO(Optimizer):
                                best_fitness=None)
             self.pareto_front.append(particle)
 
-    def optimize(self, num_iterations=100):
-        Logger.info(f"Starting MOPSO optimization with {num_iterations} iterations")
+    def step(self):
+        Logger.debug(f"Iteration {self.iteration}")
+        optimization_output = self.objective.evaluate(
+            [particle.position for particle in self.particles])
+        [particle.set_fitness(optimization_output[p_id])
+            for p_id, particle in enumerate(self.particles)]
+        FileManager.save_csv([np.concatenate([particle.position, np.ravel(
+                                particle.fitness)]) for particle in self.particles],
+                                'history/iteration' + str(self.iteration) + '.csv')
+
+        self.update_pareto_front()
+
+        for particle in self.particles:
+            particle.update_velocity(self.pareto_front,
+                                        self.inertia_weight,
+                                        self.cognitive_coefficient,
+                                        self.social_coefficient)
+            particle.update_position(self.lower_bounds, self.upper_bounds)
+
+        self.iteration += 1
+        
+    def optimize(self, num_iterations=100, max_iter_no_improv=None):
+        Logger.info("Starting MOPSO optimization")
         for _ in range(num_iterations):
-            Logger.debug(f"Iteration {self.iteration}")
-            optimization_output = self.objective.evaluate(
-                [particle.position for particle in self.particles])
-            [particle.set_fitness(optimization_output[p_id])
-             for p_id, particle in enumerate(self.particles)]
-            FileManager.save_csv([np.concatenate([particle.position, np.ravel(
-                                 particle.fitness)]) for particle in self.particles],
-                                 'history/iteration' + str(self.iteration) + '.csv')
-
-            self.update_pareto_front()
-
-            for particle in self.particles:
-                particle.update_velocity(self.pareto_front,
-                                         self.inertia_weight,
-                                         self.cognitive_coefficient,
-                                         self.social_coefficient)
-                particle.update_position(self.lower_bounds, self.upper_bounds)
-
-            self.iteration += 1
+            self.step()
         Logger.info("MOPSO optimization finished")
+
         self.save_attributes()
         self.save_state()
 
