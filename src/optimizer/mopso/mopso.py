@@ -1,8 +1,6 @@
 from copy import copy
-import itertools
-import math
 import numpy as np
-import math
+import matplotlib.pyplot as plt
 from optimizer import Optimizer, FileManager, Randomizer, Logger
 import scipy.stats as stats
 from .particle import Particle
@@ -305,3 +303,91 @@ class MOPSO(Optimizer):
         else:
             reference_pareto = np.array(self.objective.true_pareto(x)).T
             return metric(pareto, reference_pareto)
+    
+    def parallel_coordinates(self, ax=None, highlighted_particle=None):
+        if ax is None:
+            ax = plt.gca()
+        n = len(self.pareto_front)
+        parameters = np.array([particle.position for particle in self.pareto_front])
+        parameters_columns = [f'Parameter {i}' for i in range(len(parameters[0]))]
+        npar_cols = len(parameters_columns)
+        
+        # Scale parameters to range [0, 1]
+        min_vals = parameters.min(axis=0)
+        max_vals = parameters.max(axis=0)
+        scaled_parameters = (parameters - min_vals) / (max_vals - min_vals + 1e-9)
+        
+        fitnesses = np.array([particle.fitness for particle in self.pareto_front])
+        fitness_columns = [f'Fitness {i}' for i in range(len(fitnesses[0]))]
+        nfit_cols = len(fitness_columns)
+        
+        for i in range(n):
+            y = np.concatenate([scaled_parameters[i], fitnesses[i]])
+            x = np.arange(npar_cols + nfit_cols)
+            if highlighted_particle is not None and i == highlighted_particle:
+                continue
+            ax.plot(x, y)
+        
+        if highlighted_particle is not None:
+            y = np.concatenate([scaled_parameters[highlighted_particle], fitnesses[highlighted_particle]])
+            x = np.arange(npar_cols + nfit_cols)
+            ax.plot(x, y, linewidth=2, color='red')
+        
+        for i in range(npar_cols):
+            ax.axvline(i, color='grey')
+            ax.text(i, 0, f'{min_vals[i]:.2f}', ha='center', va='bottom', fontsize=8, color='black')
+            ax.text(i, 1, f'{max_vals[i]:.2f}', ha='center', va='top', fontsize=8, color='black')
+        
+        ax.set_xticks(np.arange(npar_cols + nfit_cols))
+        ax.set_xticklabels(parameters_columns + fitness_columns)
+        
+        if len(parameters_columns) > 10:
+            plt.xticks(rotation=90)
+        
+        ax.set_xlim(0, npar_cols + nfit_cols - 1)
+        ax.grid()
+        
+        # Put y axis on the right
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+        
+        return ax
+    
+    def tight_plot(self, ax=None, label=None, linecolor='blue', markercolor='red', plot_true_pareto=False, first_objective=None, second_objective=None):
+        if self.pareto_front is None or len(self.pareto_front) == 0:
+            raise ValueError("Pareto front is empty. Run the optimization algorithm first.")
+        
+        if plot_true_pareto:
+            if self.objective.true_pareto is None:
+                Logger.warning("True pareto front is not defined. Plotting without true pareto front.")
+                plot_true_pareto = False
+                
+        if self.objective.num_objectives < 2:
+            raise ValueError("Tight plot is only available for 2 objectives.")
+        
+        if first_objective is None and second_objective is None:
+            first_objective = 0
+            second_objective = 1
+            if self.objective.num_objectives > 2 and (first_objective is None or second_objective is None):
+                Logger.warning("Tight plot is only available for 2 objectives. Specify first_objective and second_objective. Fallback to first two objectives.")
+        
+        if ax is None:
+            ax = plt.gca()  # Get current axes if none is provided
+        x = np.array([particle.fitness[first_objective] for particle in self.pareto_front])
+        y = np.array([particle.fitness[second_objective] for particle in self.pareto_front])
+        sorted_indices = np.argsort(x)
+        x = x[sorted_indices]
+        y = y[sorted_indices]
+        ax.step(x, y, where='post', color=linecolor)
+        ax.scatter(x, y, facecolors='none', edgecolors=markercolor, label=label)
+        if plot_true_pareto:
+            if label is None:
+                true_pareto_label = None
+            else:
+                true_pareto_label = label + ' True Pareto'
+            lin_x = np.linspace(0, 1, max(100, len(self.pareto_front)))
+            reference_pareto = np.array(self.objective.true_pareto(lin_x))
+            ax.plot(reference_pareto[0],reference_pareto[1], color='grey', label=true_pareto_label, linestyle='--')
+        if label:
+            ax.legend()
+        return ax

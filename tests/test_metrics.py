@@ -44,10 +44,11 @@ print("Inverted generational distance: " ,pso.get_metric(optimizer.metrics.inver
 print("Hypervolume: " ,pso.get_metric(optimizer.metrics.hypervolume_indicator))
 
 fig, ax = plt.subplots()
-pareto_x = [particle.fitness[0] for particle in pso.pareto_front]
-pareto_y = [particle.fitness[1] for particle in pso.pareto_front]
-x = (np.linspace(0, 1, 100))
-real_x, real_y = true_pareto(x)
-plt.scatter(pareto_x, pareto_y, s=5)
-plt.scatter(real_x, real_y, s=5, c='red')
+pso.tight_plot(plot_true_pareto=True, label="ZDT1")
+# plt.show()
+
+fig, ax = plt.subplots()
+# list the index of the parameters in order highest to lowest of the 20th particle
+order = np.argsort(pso.pareto_front[20].position)[::-1]
+pso.parallel_coordinates(highlighted_particle=20)
 plt.show()
