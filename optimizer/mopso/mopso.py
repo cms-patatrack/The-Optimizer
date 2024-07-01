@@ -367,7 +367,8 @@ def get_dominated(particles, pareto_lenght):
     dominated_particles = np.zeros(len(particles))
     for i in range(len(particles)):
         dominated = False
-        for j in range(pareto_lenght, len(particles)):
+        for j in range(len(particles)):
+            if i < pareto_lenght and j < pareto_lenght: continue
             if np.any(particles[i] > particles[j]) and \
                     np.all(particles[i] >= particles[j]):
                 dominated = True
