@@ -13,7 +13,9 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=True, initial_particles_position='random', default_point=None):
+                 incremental_pareto=True, initial_particles_position='random', default_point=None, topology = "Random", seed =42):
+        
+        # Randomizer.rng = np.random.default_rng(42)  
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -37,10 +39,19 @@ class MOPSO(Optimizer):
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
-        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
-                          for _ in range(num_particles)]
+        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles, id, topology)
+                          for id in range(num_particles)]
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
+        
+        VALID_TOPOLOGIES = {
+            'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
+            'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring', 
+            'lower_crowding_distance_random_ring'}
+
+        if topology not in VALID_TOPOLOGIES:
+            raise ValueError(
+                f"MOPSO: topology must be one of {VALID_TOPOLOGIES}")
 
         Logger.debug(f"Setting initial particles position")
         
@@ -103,7 +114,7 @@ class MOPSO(Optimizer):
 
         if default_point is not None:
             self.particles[0].set_position(default_point)
-
+        # Randomizer.rng = np.random.default_rng(seed)  
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
         self.pareto_front = []
@@ -288,10 +299,11 @@ class MOPSO(Optimizer):
                                 particle.fitness)]) for particle in self.particles],
                                 'history/iteration' + str(self.iteration) + '.csv')
 
-        self.update_pareto_front()
+        crowding_distances = self.update_pareto_front()
 
         for particle in self.particles:
             particle.update_velocity(self.pareto_front,
+                                        crowding_distances,
                                         self.inertia_weight,
                                         self.cognitive_coefficient,
                                         self.social_coefficient)
@@ -317,19 +329,25 @@ class MOPSO(Optimizer):
         particle_fitnesses = np.array(
             [particle.fitness for particle in particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
+        
+        # if self.incremental_pareto or np.sum(dominanted) < max_pareto_len:
+        # cum_sum = np.cumsum( not dominanted)
+        # index = np.argwhere(cum_sum ==  max_pareto_len)
+        self.pareto_front = np.array([copy(particles[i]) for i in range(len(particles)) if not dominanted[i]])
+        crowding_distances = calculate_crowding_distance_njit(np.array([p.fitness for p in self.pareto_front])) if len(self.pareto_front) > 0 else []
+        sorted_indexes = np.argsort(crowding_distances[::-1])
+        self.pareto_front = self.pareto_front[sorted_indexes].tolist()
+        # self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=False)
 
-        if self.incremental_pareto:
-            self.pareto_front = [copy(particles[i]) for i in range(
-                len(particles)) if not dominanted[i]]
-        else:
-            self.pareto_front = [copy(particles[i]) for i in range(
-                pareto_lenght, len(particles)) if not dominanted[i]]
+        if not self.incremental_pareto:
+            max_pareto_len = self.num_particles * 2
+            if np.sum(np.invert(dominanted)) > max_pareto_len:
+                self.pareto_front = self.pareto_front[: max_pareto_len]
         Logger.debug(f"New pareto front size: {len(self.pareto_front)}")
-        crowding_distances = self.calculate_crowding_distance(
-            self.pareto_front)
-        self.pareto_front.sort(
-            key=lambda x: crowding_distances[x], reverse=True)
 
+        crowding_distances = calculate_crowding_distance_njit(np.array([p.fitness for p in self.pareto_front])) if len(self.pareto_front) > 0 else []
+        return crowding_distances
+    
     def calculate_crowding_distance(self, pareto_front):
         if len(pareto_front) == 0:
             return []
@@ -354,17 +372,44 @@ class MOPSO(Optimizer):
 
             for j in range(1, len(pareto_front) - 1):
                 distances[j] += (np.ravel(sorted_front[j + 1].fitness)[i] -
-                                 np.ravel(sorted_front[j - 1].fitness)[i]) / norm_denom
+                                    np.ravel(sorted_front[j - 1].fitness)[i]) / norm_denom
 
         for i, point in enumerate(pareto_front):
             point_to_distance[point] = distances[i]
 
         return point_to_distance
 
+# @njit
+def calculate_crowding_distance_njit(pareto_front):
+    num_objectives = len(pareto_front[0])
+    distances = np.zeros(len(pareto_front))
+    # point_to_distance = [[] * len(pareto_front)]
+
+    for i in range(num_objectives):
+        # Sort by objective i
+        sorted_indexes = np.argsort(pareto_front[:, i])
+        sorted_front = pareto_front[sorted_indexes]
+
+        # Set the boundary points to infinity
+        distances[0] = np.inf
+        distances[-1] = np.inf
+
+        # Normalize the objective values for calculation
+        min_obj = sorted_front[0][i]
+        max_obj = sorted_front[-1][i]
+        norm_denom = max_obj - min_obj if max_obj != min_obj else 1
+
+        for j in range(1, len(pareto_front) - 1):
+            distances[j] += (sorted_front[j + 1][i] - sorted_front[j - 1][i]) / norm_denom
+
+    # for i, point in enumerate(pareto_front):
+    #     point_to_distance[point] = distances[i]
+
+    return distances
 
 @njit
 def get_dominated(particles, pareto_lenght):
-    dominated_particles = np.zeros(len(particles))
+    dominated_particles = np.full(len(particles), False)
     for i in range(len(particles)):
         dominated = False
         for j in range(len(particles)):
