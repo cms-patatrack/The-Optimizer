@@ -1,5 +1,6 @@
 import numpy as np
 from optimizer import Randomizer
+from numba import njit, jit
 
 class Particle:
     """
@@ -26,7 +27,9 @@ class Particle:
         self.velocity = np.zeros_like(self.position)
         self.best_position = self.position
         self.best_fitness = np.array([np.inf]*self.num_objectives)
-        self.fitness = np.ones(self.num_objectives)
+        self.fitness = np.full(self.num_objectives, np.inf)
+        self.local_pareto_fitnesses = []
+        self.local_pareto_positions = []
 
     def update_velocity(self,
                         pareto_front, inertia_weight=0.5,
@@ -44,10 +47,11 @@ class Particle:
                                         (default is 1).
         """
         leader = Randomizer.rng.choice(pareto_front)
+        best_position = Randomizer.rng.choice(self.local_pareto_positions)
         cognitive_random = Randomizer.rng.uniform(0, 1)
         social_random = Randomizer.rng.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
-            (self.best_position - self.position)
+            (best_position - self.position)
         social = social_coefficient * social_random * \
             (leader.position - self.position)
         self.velocity = inertia_weight * self.velocity + cognitive + social
@@ -93,10 +97,25 @@ class Particle:
         """
         Update particle's fitness and best position
         """
-        # if np.any(self.best_fitness == np.zeros(self.num_objectives)):
-        #     self.fitness = np.ones(self.num_objectives)
-        if np.all(self.fitness <= self.best_fitness):
-            self.best_fitness = self.fitness
-            self.best_position = self.position
+        len_fitness = len(self.local_pareto_fitnesses)
+        fitnesses = np.array([f for f in self.local_pareto_fitnesses] + [self.fitness])
+        positions = np.array([p for p in self.local_pareto_positions] + [self.position])
+
+        dominated = get_dominated(fitnesses, len_fitness)
+
+        self.local_pareto_fitnesses = [fitnesses[i] for i in range(len(fitnesses)) if not dominated[i]]
+        self.local_pareto_positions = [positions[i] for i in range(len(positions)) if not dominated[i]]
+
+# @njit
+def get_dominated(particles, pareto_lenght):
+    dominated_particles = np.full(len(particles), False)
+    for i in range(len(particles)):
+        for j in range(len(particles)):
+            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
+            if np.any(particles[i] > particles[j]) and \
+                    np.all(particles[i] >= particles[j]):
+                dominated_particles[i] = True
+                break
+    return dominated_particles
 
 

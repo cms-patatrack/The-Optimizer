@@ -6,13 +6,15 @@ import matplotlib.animation as animation
 import os
 
 num_agents = 100
-num_iterations = 2500
+num_iterations = 600
 num_params = 10
 
 lb = [0.] + [-5.] * (num_params - 1)
 ub = [1.] + [5.] * (num_params - 1)
 
 optimizer.Logger.setLevel('DEBUG')
+
+optimizer.Randomizer.rng = np.random.default_rng(46)
 
 def zdt4_objective1(x):
     return x[0]
