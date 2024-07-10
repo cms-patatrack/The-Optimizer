@@ -8,11 +8,11 @@ import copy
 from pymoo.indicators.hv import HV
 
 num_agents = 100
-num_iterations = 100
-num_params = 30
+num_iterations = 300
+num_params = 10
 
-lb = [0.] * num_params
-ub = [1.] * num_params
+lb = [0.] + [-5.] * (num_params - 1)
+ub = [1.] + [5.] * (num_params - 1)
 
 optimizer.Logger.setLevel('ERROR')
 
@@ -33,10 +33,10 @@ optimizer.FileManager.saving_enabled = False
 
 objective = optimizer.ElementWiseObjective([zdt4_objective1, zdt4_objective2])
 
-topologies = ['lower_weighted_crowding_distance'
-            # 'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
-            # 'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring', 
-            # 'lower_crowding_distance_random_ring'
+topologies = [
+            'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
+            'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring', 
+            'lower_crowding_distance_random_ring'
             ]
 
 paretos = []

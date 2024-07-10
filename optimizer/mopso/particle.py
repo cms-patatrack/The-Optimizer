@@ -33,6 +33,9 @@ class Particle:
     def update_velocity(self,
                         pareto_front, crowding_distances, inertia_weight=0.5,
                         cognitive_coefficient=1, social_coefficient=1,):
+
+        cognitive_coefficient = Randomizer.rng.uniform(1.5, 2)
+        social_coefficient = Randomizer.rng.uniform(1.5, 2)
         """
         Update the particle's velocity based on its best position and the global best position.
 
