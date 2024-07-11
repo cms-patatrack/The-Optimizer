@@ -3,6 +3,7 @@ import sys
 import json
 import numpy as np
 import logging
+from numba import njit
 
 class CustomFormatter(logging.Formatter):
 
@@ -93,3 +94,15 @@ class FileManager:
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
         with open(full_path) as f:
             return json.load(f)
+
+@njit
+def get_dominated(particles, pareto_lenght):
+    dominated_particles = np.full(len(particles), False)
+    for i in range(len(particles)):
+        for j in range(len(particles)):
+            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
+            if np.any(particles[i] > particles[j]) and \
+                    np.all(particles[i] >= particles[j]):
+                dominated_particles[i] = True
+                break
+    return dominated_particles

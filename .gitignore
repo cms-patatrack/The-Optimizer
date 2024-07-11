@@ -167,3 +167,9 @@ tmp
 
 # profiling data
 *.profile
+
+# other formats
+*.png
+*.npy
+*.zip
+*.html
