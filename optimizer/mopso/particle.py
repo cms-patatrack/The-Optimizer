@@ -3,22 +3,6 @@ from optimizer import Randomizer
 from util import get_dominated
 
 class Particle:
-    """
-    Represents a particle in the Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
-
-    Parameters:
-        lower_bound (numpy.ndarray): Lower bound for the particle's position.
-        upper_bound (numpy.ndarray): Upper bound for the particle's position.
-        num_objectives (int): Number of objectives in the optimization problem.
-
-    Attributes:
-        position (numpy.ndarray): Current position of the particle.
-        num_objectives (int): Number of objectives in the optimization problem.
-        velocity (numpy.ndarray): Current velocity of the particle.
-        best_position (numpy.ndarray): Best position the particle has visited.
-        best_fitness (numpy.ndarray): Best fitness values achieved by the particle.
-        fitness (numpy.ndarray): Current fitness values of the particle.
-    """
 
     def __init__(self, lower_bound, num_objectives, num_particles, id, topology):
         self.position = np.asarray(lower_bound)
@@ -39,18 +23,6 @@ class Particle:
                         inertia_weight=0.5,
                         cognitive_coefficient=1, 
                         social_coefficient=1):
-        """
-        Update the particle's velocity based on its best position and the global best position.
-
-        Parameters:
-            global_best_position (numpy.ndarray): Global best position in the swarm.
-            inertia_weight (float): Inertia weight controlling the impact of the previous velocity
-                                    (default is 0.5).
-            cognitive_coefficient (float): Cognitive coefficient controlling the impact of personal
-                                           best (default is 1).
-            social_coefficient (float): Social coefficient controlling the impact of global best
-                                        (default is 1).
-        """
         leader = self.get_pareto_leader(pareto_front, crowding_distances)
         best_position = Randomizer.rng.choice(self.local_best_positions)
         cognitive_random = Randomizer.rng.uniform(0, 1)
@@ -62,13 +34,6 @@ class Particle:
         self.velocity = inertia_weight * self.velocity + cognitive + social
 
     def update_position(self, lower_bound, upper_bound):
-        """
-        Update the particle's position based on its current velocity and bounds.
-
-        Parameters:
-            lower_bound (numpy.ndarray): Lower bound for the particle's position.
-            upper_bound (numpy.ndarray): Upper bound for the particle's position.
-        """
         new_position = np.empty_like(self.position)
         for i in range(len(lower_bound)):
             if type(lower_bound[i]) == int or type(lower_bound[i]) == bool:
@@ -78,13 +43,6 @@ class Particle:
         self.position = np.clip(new_position, lower_bound, upper_bound)
 
     def set_fitness(self, fitness):
-        """
-        Set the fitness values of the particle and calls `update_best` method to update the
-        particle's fitness and best position.
-
-        Parameters:
-            fitness (numpy.ndarray): The fitness values of the particle for each objective.
-        """
         self.fitness = fitness
         self.update_best()
 
@@ -99,9 +57,6 @@ class Particle:
         self.best_fitness = best_fitness
 
     def update_best(self):
-        """
-        Update particle's fitness and best position
-        """
         len_fitness = len(self.local_best_fitnesses)
         fitnesses = np.array([f for f in self.local_best_fitnesses] + [self.fitness])
         positions = np.array([p for p in self.local_best_positions] + [self.position])
