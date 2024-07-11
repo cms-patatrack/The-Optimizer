@@ -6,7 +6,7 @@ import math
 from optimizer import Optimizer, FileManager, Randomizer, Logger
 import scipy.stats as stats
 from .particle import Particle
-from util import get_dominated
+from optimizer.util import get_dominated
 
 class MOPSO(Optimizer):
     def __init__(self,
