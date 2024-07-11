@@ -1,12 +1,13 @@
 import numpy as np
 
+
 class Objective():
     def __init__(self, objective_functions, num_objectives=None) -> None:
         if not isinstance(objective_functions, list):
             self.objective_functions = [objective_functions]
         else:
             self.objective_functions = objective_functions
-            
+
         if num_objectives is None:
             self.num_objectives = len(self.objective_functions)
         else:
@@ -24,7 +25,6 @@ class Objective():
             else:
                 solutions.append(r)
         return np.array(solutions)
-
 
     def type(self):
         return self.__class__.__name__

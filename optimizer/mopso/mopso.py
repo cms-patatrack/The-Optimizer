@@ -8,14 +8,15 @@ import scipy.stats as stats
 from .particle import Particle
 from optimizer.util import get_dominated
 
+
 class MOPSO(Optimizer):
     def __init__(self,
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  initial_particles_position='random', default_point=None,
-                 exploring_particles=False, topology = 'random'):
-        self.objective = objective 
+                 exploring_particles=False, topology='random'):
+        self.objective = objective
         self.num_particles = num_particles
         self.particles = []
         self.iteration = 0
@@ -25,13 +26,14 @@ class MOPSO(Optimizer):
                 self.load_state()
                 return
             except FileNotFoundError as e:
-                Logger.warning("Checkpoint not found. Fallback to standard construction.")
+                Logger.warning(
+                    "Checkpoint not found. Fallback to standard construction.")
         else:
             Logger.debug("Loading disabled. Starting standard construction.")
 
         if len(lower_bounds) != len(upper_bounds):
             Logger.warning(f"Warning: lower_bounds and upper_bounds have different lengths."
-                          f"The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
+                           f"The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
         self.num_params = min(len(lower_bounds), len(upper_bounds))
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
@@ -43,14 +45,14 @@ class MOPSO(Optimizer):
         self.social_coefficient = social_coefficient
         self.particles = [Particle(lower_bounds, objective.num_objectives, num_particles, id, topology)
                           for id in range(num_particles)]
-        
+
         self.exploring_particles = exploring_particles
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
-        
+
         VALID_TOPOLOGIES = {
             'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
-            'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring', 
+            'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring',
             'lower_crowding_distance_random_ring'}
 
         if topology not in VALID_TOPOLOGIES:
@@ -58,7 +60,7 @@ class MOPSO(Optimizer):
                 f"MOPSO: topology must be one of {VALID_TOPOLOGIES}")
 
         Logger.debug(f"Setting initial particles position")
-        
+
         if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
              for particle in self.particles]
@@ -110,7 +112,7 @@ class MOPSO(Optimizer):
 
         if default_point is not None:
             self.particles[0].set_position(default_point)
-        # Randomizer.rng = np.random.default_rng(seed)  
+        # Randomizer.rng = np.random.default_rng(seed)
 
     def check_types(self):
         lb_types = [type(lb) for lb in self.lower_bounds]
@@ -125,7 +127,7 @@ class MOPSO(Optimizer):
             if ub_types[i] not in acceptable_types:
                 raise ValueError(f"Upper bound type {ub_types[i]} for "
                                  f"Upper bound {i} is not acceptable")
-                
+
         if lb_types != ub_types:
             Logger.warning(
                 "lower_bounds and upper_bounds are of different types")
@@ -165,8 +167,8 @@ class MOPSO(Optimizer):
         [particle.set_fitness(optimization_output[p_id])
             for p_id, particle in enumerate(self.particles)]
         FileManager.save_csv([np.concatenate([particle.position, np.ravel(
-                                particle.fitness)]) for particle in self.particles],
-                                'history/iteration' + str(self.iteration) + '.csv')
+            particle.fitness)]) for particle in self.particles],
+            'history/iteration' + str(self.iteration) + '.csv')
 
         crowding_distances = self.update_pareto_front()
 
@@ -180,7 +182,7 @@ class MOPSO(Optimizer):
                 self.scatter_particle(particle)
             particle.update_position(self.lower_bounds, self.upper_bounds)
         self.iteration += 1
-        
+
     def optimize(self, num_iterations=100, max_iter_no_improv=None):
         Logger.info(f"Starting MOPSO optimization from iteration {self.iteration} to {num_iterations}")
         for _ in range(self.iteration, num_iterations):
@@ -197,18 +199,22 @@ class MOPSO(Optimizer):
         particle_fitnesses = np.array(
             [particle.fitness for particle in particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
-        
-        self.pareto_front =[copy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
-        crowding_distances = self.calculate_crowding_distance(self.pareto_front)
-        self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
+
+        self.pareto_front = [copy(particles[i]) for i in range(
+            len(particles)) if not dominanted[i]]
+        crowding_distances = self.calculate_crowding_distance(
+            self.pareto_front)
+        self.pareto_front.sort(
+            key=lambda x: crowding_distances[x], reverse=True)
 
         max_pareto_len = 500
         self.pareto_front = self.pareto_front[: max_pareto_len]
         Logger.debug(f"New pareto front size: {len(self.pareto_front)}")
 
-        crowding_distances = self.calculate_crowding_distance(self.pareto_front)
+        crowding_distances = self.calculate_crowding_distance(
+            self.pareto_front)
         return crowding_distances
-    
+
     def calculate_crowding_distance(self, pareto_front):
         if len(pareto_front) == 0:
             return []
@@ -234,10 +240,13 @@ class MOPSO(Optimizer):
         return point_to_distance
 
     def scatter_particle(self, particle: Particle):
-        Logger.debug(f"Particle {particle} did not improve for 10 iterations. Scattering.")
+        Logger.debug(
+            f"Particle {particle} did not improve for 10 iterations. Scattering.")
         for i in range(len(self.lower_bounds)):
-            lower_count = sum([1 for p in self.particles if p.position[i] < particle.position[i]])
-            upper_count = sum([1 for p in self.particles if p.position[i] > particle.position[i]])
+            lower_count = sum(
+                [1 for p in self.particles if p.position[i] < particle.position[i]])
+            upper_count = sum(
+                [1 for p in self.particles if p.position[i] > particle.position[i]])
             if lower_count > upper_count:
                 particle.velocity[i] = 1
             else:

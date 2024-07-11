@@ -6,6 +6,7 @@ import logging
 from numba import njit
 import pickle
 
+
 class CustomFormatter(logging.Formatter):
 
     grey = "\x1b[38;20m"
@@ -28,18 +29,23 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
+
 Logger = logging.getLogger("Optimizer")
 handler = logging.StreamHandler()
 handler.setFormatter(CustomFormatter())
 Logger.addHandler(handler)
 
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
-    Logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    Logger.error("Uncaught exception", exc_info=(
+        exc_type, exc_value, exc_traceback))
+
 
 sys.excepthook = handle_exception
+
 
 class Randomizer:
     rng = np.random.default_rng()
@@ -95,7 +101,7 @@ class FileManager:
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
         with open(full_path) as f:
             return json.load(f)
-    
+
     @classmethod
     def save_pickle(cls, object, filename):
         if not cls.saving_enabled:
@@ -108,7 +114,7 @@ class FileManager:
         Logger.debug(f"Saving to '{full_path}'")
         with open(full_path, 'wb') as f:
             pickle.dump(object, f)
-    
+
     @classmethod
     def load_pickle(cls, filename):
         full_path = os.path.join(cls.working_dir, filename)
@@ -119,11 +125,14 @@ class FileManager:
             return pickle.load(f)
 
 # @njit
+
+
 def get_dominated(particles, pareto_lenght):
     dominated_particles = np.full(len(particles), False)
     for i in range(len(particles)):
         for j in range(len(particles)):
-            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
+            if (i < pareto_lenght and j < pareto_lenght) or i == j:
+                continue
             if np.any(particles[i] > particles[j]) and \
                     np.all(particles[i] >= particles[j]):
                 dominated_particles[i] = True
