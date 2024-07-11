@@ -6,7 +6,7 @@ import matplotlib.animation as animation
 import os
 
 num_agents = 100
-num_iterations = 500
+num_iterations = 100
 num_params = 30
 
 lb = [0.] * num_params
@@ -25,15 +25,15 @@ def zdt1_objective(x):
 optimizer.Randomizer.rng = np.random.default_rng(46)
 
 optimizer.FileManager.working_dir = "tmp/zdt1/"
-optimizer.FileManager.loading_enabled = False
-optimizer.FileManager.saving_enabled = False
+optimizer.FileManager.loading_enabled = True
+optimizer.FileManager.saving_enabled = True
 
 objective = optimizer.ElementWiseObjective(zdt1_objective, 2)
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
                       inertia_weight=0.4, cognitive_coefficient=1.5, social_coefficient=2,
-                      initial_particles_position='random', incremental_pareto=True)
+                      initial_particles_position='random')
 
 # run the optimization algorithm
 pso.optimize(num_iterations)
@@ -54,13 +54,3 @@ if not os.path.exists('tmp'):
     os.makedirs('tmp')
 plt.savefig('tmp/pf.png')
 plt.close()
-
-lengths = [[] for i in range(num_agents)]
-for i in range(num_agents):
-    lengths[i] = pso.particles[i].len_local_pareto[0:50]
-
-plt.figure()
-plt.imshow(lengths)
-plt.savefig('tmp/hist_lengths.png')
-plt.close()
-

@@ -15,16 +15,19 @@ class MOPSO(Optimizer):
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology = 'random'):
-        self.objective = objective
+        self.objective = objective 
+        self.num_particles = num_particles
+        self.particles = []
+        self.iteration = 0
+        self.pareto_front = []
         if FileManager.loading_enabled:
             try:
-                self.load_checkpoint()
+                self.load_state()
                 return
             except FileNotFoundError as e:
                 Logger.warning("Checkpoint not found. Fallback to standard construction.")
         else:
             Logger.debug("Loading disabled. Starting standard construction.")
-        self.num_particles = num_particles
 
         if len(lower_bounds) != len(upper_bounds):
             Logger.warning(f"Warning: lower_bounds and upper_bounds have different lengths."
@@ -38,8 +41,8 @@ class MOPSO(Optimizer):
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
-        self.particles = [Particle(lower_bounds, objective.num_objectives, num_particles)
-                          for _ in range(num_particles)]
+        self.particles = [Particle(lower_bounds, objective.num_objectives, num_particles, id, topology)
+                          for id in range(num_particles)]
         
         self.exploring_particles = exploring_particles
         VALID_INITIAL_PARTICLES_POSITIONS = {
@@ -108,8 +111,6 @@ class MOPSO(Optimizer):
         if default_point is not None:
             self.particles[0].set_position(default_point)
         # Randomizer.rng = np.random.default_rng(seed)  
-        self.iteration = 0
-        self.pareto_front = []
 
     def check_types(self):
         lb_types = [type(lb) for lb in self.lower_bounds]
@@ -139,7 +140,7 @@ class MOPSO(Optimizer):
 
     def save_state(self):
         Logger.debug("Saving MOPSO state")
-        FileManager.save_pickle(self, "checkpoint/mopso.json")
+        FileManager.save_pickle(self, "checkpoint/mopso.pkl")
 
     def export_state(self):
         Logger.debug("Exporting MOPSO state")
@@ -154,7 +155,8 @@ class MOPSO(Optimizer):
 
     def load_state(self):
         Logger.debug("Loading checkpoint")
-        self = FileManager.load_pickle("checkpoint/mopso.json")
+        obj = FileManager.load_pickle("checkpoint/mopso.pkl")
+        self.__dict__ = obj.__dict__
 
     def step(self):
         Logger.debug(f"Iteration {self.iteration}")
@@ -177,15 +179,12 @@ class MOPSO(Optimizer):
             if self.exploring_particles and particle.iterations_with_no_improvement > 10:
                 self.scatter_particle(particle)
             particle.update_position(self.lower_bounds, self.upper_bounds)
-
         self.iteration += 1
         
     def optimize(self, num_iterations=100, max_iter_no_improv=None):
-        Logger.info("Starting MOPSO optimization")
-        for _ in range(num_iterations):
+        Logger.info(f"Starting MOPSO optimization from iteration {self.iteration} to {num_iterations}")
+        for _ in range(self.iteration, num_iterations):
             self.step()
-        Logger.info("MOPSO optimization finished")
-
         self.save_state()
         self.export_state()
 

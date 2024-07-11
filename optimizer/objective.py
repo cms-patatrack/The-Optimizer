@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Objective():
     def __init__(self, objective_functions, num_objectives=None) -> None:
         if not isinstance(objective_functions, list):

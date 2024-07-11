@@ -106,7 +106,7 @@ class FileManager:
         if not os.path.exists(folder):
             os.makedirs(folder)
         Logger.debug(f"Saving to '{full_path}'")
-        with open(full_path, 'w') as f:
+        with open(full_path, 'wb') as f:
             pickle.dump(object, f)
     
     @classmethod
@@ -115,10 +115,10 @@ class FileManager:
         Logger.debug(f"Loading from '{full_path}'")
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
-        with open(full_path) as f:
+        with open(full_path, 'rb') as f:
             return pickle.load(f)
 
-@njit
+# @njit
 def get_dominated(particles, pareto_lenght):
     dominated_particles = np.full(len(particles), False)
     for i in range(len(particles)):
