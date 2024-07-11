@@ -56,3 +56,14 @@ plt.scatter(pareto_x, pareto_y, s=5)
 if not os.path.exists('tmp'):
     os.makedirs('tmp')
 plt.savefig('tmp/pf.png')
+plt.close()
+
+lengths = [[] for i in range(num_agents)]
+for i in range(num_agents):
+    lengths[i] = pso.particles[i].len_local_pareto[0:50]
+
+plt.figure()
+plt.imshow(lengths)
+plt.savefig('tmp/hist_lengths.png')
+plt.close()
+

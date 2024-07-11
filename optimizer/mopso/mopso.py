@@ -4,16 +4,18 @@ import math
 import numpy as np
 import math
 from optimizer import Optimizer, FileManager, Randomizer, Logger
-from numba import njit, jit
 import scipy.stats as stats
 from .particle import Particle
+from util import get_dominated
 
 class MOPSO(Optimizer):
     def __init__(self,
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=True, initial_particles_position='random', default_point=None):
+                 incremental_pareto=True, initial_particles_position='random', default_point=None, topology = "random", seed =42):
+        
+        # Randomizer.rng = np.random.default_rng(42)  
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -37,10 +39,19 @@ class MOPSO(Optimizer):
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
-        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles)
-                          for _ in range(num_particles)]
+        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles, id, topology)
+                          for id in range(num_particles)]
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
+        
+        VALID_TOPOLOGIES = {
+            'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
+            'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring', 
+            'lower_crowding_distance_random_ring'}
+
+        if topology not in VALID_TOPOLOGIES:
+            raise ValueError(
+                f"MOPSO: topology must be one of {VALID_TOPOLOGIES}")
 
         Logger.debug(f"Setting initial particles position")
         
@@ -103,7 +114,7 @@ class MOPSO(Optimizer):
 
         if default_point is not None:
             self.particles[0].set_position(default_point)
-
+        # Randomizer.rng = np.random.default_rng(seed)  
         self.iteration = 0
         self.incremental_pareto = incremental_pareto
         self.pareto_front = []
@@ -288,10 +299,11 @@ class MOPSO(Optimizer):
                                 particle.fitness)]) for particle in self.particles],
                                 'history/iteration' + str(self.iteration) + '.csv')
 
-        self.update_pareto_front()
+        crowding_distances = self.update_pareto_front()
 
         for particle in self.particles:
             particle.update_velocity(self.pareto_front,
+                                        crowding_distances,
                                         self.inertia_weight,
                                         self.cognitive_coefficient,
                                         self.social_coefficient)
@@ -317,16 +329,22 @@ class MOPSO(Optimizer):
         particle_fitnesses = np.array(
             [particle.fitness for particle in particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
+        
+        # if self.incremental_pareto or np.sum(dominanted) < max_pareto_len:
+        # cum_sum = np.cumsum( not dominanted)
+        # index = np.argwhere(cum_sum ==  max_pareto_len)
+        self.pareto_front =[copy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
+        crowding_distances = self.calculate_crowding_distance(self.pareto_front)
+        self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
+        # self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=False)
 
-        self.pareto_front = [copy(particles[i]) for i in range(
-            len(particles)) if not dominanted[i]]
-
+        max_pareto_len = 500
+        self.pareto_front = self.pareto_front[: max_pareto_len]
         Logger.debug(f"New pareto front size: {len(self.pareto_front)}")
-        crowding_distances = self.calculate_crowding_distance(
-            self.pareto_front)
-        self.pareto_front.sort(
-            key=lambda x: crowding_distances[x], reverse=True)
 
+        crowding_distances = self.calculate_crowding_distance(self.pareto_front)
+        return crowding_distances
+    
     def calculate_crowding_distance(self, pareto_front):
         if len(pareto_front) == 0:
             return []
@@ -357,18 +375,6 @@ class MOPSO(Optimizer):
             point_to_distance[point] = distances[i]
 
         return point_to_distance
-
-@njit
-def get_dominated(particles, pareto_lenght):
-    dominated_particles = np.full(len(particles), False)
-    for i in range(len(particles)):
-        for j in range(len(particles)):
-            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
-            if np.any(particles[i] > particles[j]) and \
-                    np.all(particles[i] >= particles[j]):
-                dominated_particles[i] = True
-                break
-    return dominated_particles
 
 
 

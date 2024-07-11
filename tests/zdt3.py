@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
 
-num_agents = 60
-num_iterations = 200
+num_agents = 100
+num_iterations = 100
 num_params = 30
 
 lb = [0.] * num_params
@@ -34,7 +34,7 @@ objective = optimizer.ElementWiseObjective([zdt3_objective1, zdt3_objective2])
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
-                      inertia_weight=0.4, cognitive_coefficient=1, social_coefficient=2, initial_particles_position='random')
+                      inertia_weight=0.4, cognitive_coefficient=1, social_coefficient=2, initial_particles_position='random', topology = 'random')
 
 # run the optimization algorithm
 pso.optimize(num_iterations)
