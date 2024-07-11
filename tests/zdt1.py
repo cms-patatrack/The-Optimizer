@@ -14,16 +14,12 @@ ub = [1.] * num_params
 
 optimizer.Logger.setLevel('DEBUG')
 
-def zdt1_objective1(x):
-    return x[0]
-
-
-def zdt1_objective2(x):
+def zdt1_objective(x):
     f1 = x[0]
     g = 1 + 9.0 / (len(x)-1) * sum(x[1:])
     h = 1.0 - np.sqrt(f1 / g)
     f2 = g * h
-    return f2
+    return f1, f2
 
 
 optimizer.Randomizer.rng = np.random.default_rng(46)
@@ -32,7 +28,7 @@ optimizer.FileManager.working_dir = "tmp/zdt1/"
 optimizer.FileManager.loading_enabled = False
 optimizer.FileManager.saving_enabled = False
 
-objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
+objective = optimizer.ElementWiseObjective(zdt1_objective, 2)
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
