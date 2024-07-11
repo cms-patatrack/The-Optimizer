@@ -13,7 +13,7 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=True, initial_particles_position='random', default_point=None,
+                 initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology = 'random'):
         self.objective = objective
         if FileManager.loading_enabled:
@@ -109,7 +109,6 @@ class MOPSO(Optimizer):
             self.particles[0].set_position(default_point)
         # Randomizer.rng = np.random.default_rng(seed)  
         self.iteration = 0
-        self.incremental_pareto = incremental_pareto
         self.pareto_front = []
 
     def check_types(self):
@@ -148,7 +147,6 @@ class MOPSO(Optimizer):
             'inertia_weight': self.inertia_weight,
             'cognitive_coefficient': self.cognitive_coefficient,
             'social_coefficient': self.social_coefficient,
-            'incremental_pareto': self.incremental_pareto,
             'iteration': self.iteration
         }
         FileManager.save_json(pso_attributes, "checkpoint/pso_attributes.json")
@@ -183,7 +181,6 @@ class MOPSO(Optimizer):
         self.inertia_weight = pso_attributes['inertia_weight']
         self.cognitive_coefficient = pso_attributes['cognitive_coefficient']
         self.social_coefficient = pso_attributes['social_coefficient']
-        self.incremental_pareto = pso_attributes['incremental_pareto']
         self.iteration = pso_attributes['iteration']
 
         # restore particles
