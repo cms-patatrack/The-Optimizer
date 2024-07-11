@@ -338,9 +338,8 @@ class MOPSO(Optimizer):
         self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
         # self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=False)
 
-        if not self.incremental_pareto:
-            max_pareto_len = 500
-            self.pareto_front = self.pareto_front[: max_pareto_len]
+        max_pareto_len = 500
+        self.pareto_front = self.pareto_front[: max_pareto_len]
         Logger.debug(f"New pareto front size: {len(self.pareto_front)}")
 
         crowding_distances = self.calculate_crowding_distance(self.pareto_front)
@@ -381,12 +380,13 @@ class MOPSO(Optimizer):
 def get_dominated(particles, pareto_lenght):
     dominated_particles = np.full(len(particles), False)
     for i in range(len(particles)):
-        dominated = False
         for j in range(len(particles)):
-            if i < pareto_lenght and j < pareto_lenght: continue
+            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
             if np.any(particles[i] > particles[j]) and \
                     np.all(particles[i] >= particles[j]):
-                dominated = True
+                dominated_particles[i] = True
                 break
-        dominated_particles[i] = dominated
     return dominated_particles
+
+
+
