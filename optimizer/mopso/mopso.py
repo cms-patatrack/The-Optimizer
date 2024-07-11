@@ -43,7 +43,7 @@ class MOPSO(Optimizer):
         
         self.exploring_particles = exploring_particles
         VALID_INITIAL_PARTICLES_POSITIONS = {
-            'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
+            'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
         
         VALID_TOPOLOGIES = {
             'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
@@ -56,11 +56,6 @@ class MOPSO(Optimizer):
 
         Logger.debug(f"Setting initial particles position")
         
-        if initial_particles_position == 'spread':
-            Logger.warning(f"Initial distribution forced to 'random'.")
-            initial_particles_position = 'random'
-            # self.spread_particles()
-
         if initial_particles_position == 'lower_bounds':
             [particle.set_position(self.lower_bounds)
              for particle in self.particles]
@@ -84,10 +79,8 @@ class MOPSO(Optimizer):
                             f"Type {type(self.lower_bounds[i])} not supported")
                     positions.append(position)
                 return np.array(positions)
-
             [particle.set_position(random_position())
              for particle in self.particles]
-
         elif initial_particles_position == 'gaussian':
             if default_point is None:
                 default_point = np.mean(
@@ -108,7 +101,6 @@ class MOPSO(Optimizer):
                 for i in range(self.num_params):
                     if type(lower_bounds[i]) == int or type(lower_bounds[i]) == bool:
                         particle.position[i] = int(round(particle.position[i]))
-
         elif initial_particles_position not in VALID_INITIAL_PARTICLES_POSITIONS:
             raise ValueError(
                 f"MOPSO: initial_particles_position must be one of {VALID_INITIAL_PARTICLES_POSITIONS}")
@@ -133,7 +125,7 @@ class MOPSO(Optimizer):
             if ub_types[i] not in acceptable_types:
                 raise ValueError(f"Upper bound type {ub_types[i]} for "
                                  f"Upper bound {i} is not acceptable")
-
+                
         if lb_types != ub_types:
             Logger.warning(
                 "lower_bounds and upper_bounds are of different types")
@@ -145,66 +137,6 @@ class MOPSO(Optimizer):
                 elif lb_types[i] == int or ub_types[i] == int:
                     self.upper_bounds[i] = int(self.upper_bounds[i])
                     self.lower_bounds[i] = int(self.lower_bounds[i])
-
-    def insert_nodes(self, param_list, is_bool=False):
-        indices = [i for i in range(len(param_list) - 1)]
-        is_int = any(isinstance(x, int) for x in param_list)
-        is_float = any(isinstance(x, float) for x in param_list)
-        if is_float:
-            new_values = [(param_list[idx] + param_list[idx + 1]
-                           ) / 2 for idx in indices]
-        elif is_int:
-            new_values = [math.floor(
-                (param_list[idx] + param_list[idx + 1]) / 2) for idx in indices]
-        for new_value in new_values:
-            for idx, val in enumerate(param_list[:-1]):
-                if val <= new_value < param_list[idx + 1]:
-                    if is_bool:
-                        param_list.insert(idx + 1, bool(new_value))
-                    else:
-                        param_list.insert(idx + 1, new_value)
-                    break
-        return param_list
-
-    def get_nodes(self):
-        
-        def ndcube(*args):
-            return list(itertools.product(*map(lambda x: [x[0], x[1]], args)))
-        
-        bounds = list(zip(self.lower_bounds, self.upper_bounds))
-        all_nodes = ndcube(*bounds)
-        print(len(all_nodes))
-        exit()
-        indices_with_bool = [idx for idx, node in enumerate(
-            all_nodes) if any(isinstance(val, bool) for val in node)]
-        all_nodes = [[2 if isinstance(val, bool) and val else 0 if isinstance(
-            val, bool) and not val else val for val in node] for node in all_nodes]
-
-        if self.num_particles < self.num_params:
-            Logger.warning(f"Warning: not enough particles, now you are running with {len(all_nodes[0])} particles")
-
-        particle_count = len(all_nodes[0])
-        while particle_count < self.num_particles:
-            for idx in range(self.num_params):
-                nodes = all_nodes[idx]
-                len_before = len(nodes)
-                if idx in indices_with_bool:
-                    nodes = self.insert_nodes(nodes, is_bool=True)
-                else:
-                    nodes = self.insert_nodes(nodes)
-                len_after = len(nodes)
-                particle_count += (len_after - len_before) / self.num_params
-        for idx in indices_with_bool:
-            all_nodes[idx][0] = False
-            all_nodes[idx][len(all_nodes[idx]) - 1] = True
-        combinations = itertools.product(*all_nodes)
-        return np.array([np.array(combo, dtype=object) for combo in combinations])
-
-    def spread_particles(self):
-        positions = self.get_nodes()
-        np.random.shuffle(positions)
-        [particle.set_position(point) for particle,
-         point in zip(self.particles, positions)]
 
     def save_attributes(self):
         Logger.debug("Saving PSO attributes")
@@ -375,6 +307,3 @@ class MOPSO(Optimizer):
                 particle.velocity[i] = 1
             else:
                 particle.velocity[i] = -1
-
-
-
