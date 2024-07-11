@@ -7,6 +7,7 @@ class Particle:
 
     def __init__(self, lower_bound, num_objectives, num_particles, id, topology):
         self.position = np.asarray(lower_bound)
+        self.previous_position = np.asarray(lower_bound)
         self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.velocity = np.zeros_like(self.position)
@@ -35,17 +36,19 @@ class Particle:
         self.velocity = inertia_weight * self.velocity + cognitive + social
 
     def update_position(self, lower_bound, upper_bound):
+        self.previous_position = self.position.copy()
         new_position = np.empty_like(self.position)
         for i in range(len(lower_bound)):
             if type(lower_bound[i]) == int or type(lower_bound[i]) == bool:
-                new_position[i] = np.round(self.position[i] + self.velocity[i])
+                new_position[i] = np.round(
+                    self.position[i] + self.velocity[i])  # per lr
             else:
                 new_position[i] = self.position[i] + self.velocity[i]
         self.position = np.clip(new_position, lower_bound, upper_bound)
 
     def set_fitness(self, fitness):
         self.fitness = fitness
-        self.update_best()
+        return self.update_best()
 
     def set_position(self, position):
         self.position = position
@@ -88,6 +91,16 @@ class Particle:
         else:
             raise ValueError(
                 f"MOPSO: {self.topology} not implemented!")
+
+        dominated = get_dominated(fitnesses, len_fitness)
+
+    def __eq__(self, other):
+        if isinstance(other, Particle):
+            return np.all(self.position == other.position) and np.all(self.velocity == other.velocity)
+        return False
+
+    def __hash__(self):
+        return hash((tuple(self.position.tolist()), tuple(self.velocity.tolist())))
 
 
 def weighted_crowding_distance_topology(pareto_front, crowding_distances, higher):
