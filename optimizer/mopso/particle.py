@@ -33,6 +33,7 @@ class Particle:
         self.fitness = np.full(self.num_objectives, np.inf)
         self.local_pareto_fitnesses = []
         self.local_pareto_positions = []
+        self.len_local_pareto = []
 
     def update_velocity(self,
                         pareto_front, crowding_distances, inertia_weight=0.5,
@@ -111,47 +112,36 @@ class Particle:
 
         self.local_pareto_fitnesses = [fitnesses[i] for i in range(len(fitnesses)) if not dominated[i]]
         self.local_pareto_positions = [positions[i] for i in range(len(positions)) if not dominated[i]]
+        self.len_local_pareto.append(len(self.local_pareto_fitnesses))
 
-# @njit
-def get_dominated(particles, pareto_lenght):
-    dominated_particles = np.full(len(particles), False)
-    for i in range(len(particles)):
-        for j in range(len(particles)):
-            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
-            if np.any(particles[i] > particles[j]) and \
-                    np.all(particles[i] >= particles[j]):
-                dominated_particles[i] = True
-                break
-    return dominated_particles
+    def get_pareto_leader(self, pareto_front, crowding_distances):
+        if self.topology == "random":
+            return Randomizer.rng.choice(pareto_front)
+        
+        elif self.topology == "higher_crowding_distance":
+            return crowding_distance_topology(pareto_front, crowding_distances, higher = True)
 
-def get_pareto_leader(self, pareto_front, crowding_distances):
-    if self.topology == "random":
-        return Randomizer.rng.choice(pareto_front)
-    
-    elif self.topology == "higher_crowding_distance":
-        return crowding_distance_topology(pareto_front, crowding_distances, higher = True)
+        elif self.topology == "lower_crowding_distance":
+            return crowding_distance_topology(pareto_front, crowding_distances, higher = False)
+        
+        elif self.topology == "higher_weighted_crowding_distance":
+            return weighted_crowding_distance_topology(pareto_front, crowding_distances, higher = True)
 
-    elif self.topology == "lower_crowding_distance":
-        return crowding_distance_topology(pareto_front, crowding_distances, higher = False)
-    
-    elif self.topology == "higher_weighted_crowding_distance":
-        return weighted_crowding_distance_topology(pareto_front, crowding_distances, higher = True)
+        elif self.topology == "lower_weighted_crowding_distance":
+            return weighted_crowding_distance_topology(pareto_front, crowding_distances, higher = False)
 
-    elif self.topology == "lower_weighted_crowding_distance":
-        return weighted_crowding_distance_topology(pareto_front, crowding_distances, higher = False)
+        elif self.topology == "round_robin":
+            return round_robin_topology(pareto_front, self.id)
+        
+        elif self.topology == "higher_crowding_distance_random_ring":
+            return random_ring_topology(pareto_front, crowding_distances, higher = True)
+        
+        elif self.topology == "lower_crowding_distance_random_ring":
+            return random_ring_topology(pareto_front, crowding_distances, higher = False)
 
-    elif self.topology == "round_robin":
-        return round_robin_topology(pareto_front, self.id)
-    
-    elif self.topology == "higher_crowding_distance_random_ring":
-        return random_ring_topology(pareto_front, crowding_distances, higher = True)
-    
-    elif self.topology == "lower_crowding_distance_random_ring":
-        return random_ring_topology(pareto_front, crowding_distances, higher = False)
-
-    else:
-        raise ValueError(
-            f"MOPSO: {self.topology} not implemented!")
+        else:
+            raise ValueError(
+                f"MOPSO: {self.topology} not implemented!")
 
 def crowding_distance_topology(pareto_front, crowding_distances, higher):
     sorted_indexes = np.argsort(crowding_distances[::-1]) if higher else np.argsort(crowding_distances)
@@ -192,3 +182,14 @@ def boltzmann(crowding_distances, higher):
     pdf = pdf / (np.sum(pdf))
     return pdf
 
+@njit
+def get_dominated(particles, pareto_lenght):
+    dominated_particles = np.full(len(particles), False)
+    for i in range(len(particles)):
+        for j in range(len(particles)):
+            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
+            if np.any(particles[i] > particles[j]) and \
+                    np.all(particles[i] >= particles[j]):
+                dominated_particles[i] = True
+                break
+    return dominated_particles
