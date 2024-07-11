@@ -137,22 +137,12 @@ class MOPSO(Optimizer):
                     self.upper_bounds[i] = int(self.upper_bounds[i])
                     self.lower_bounds[i] = int(self.lower_bounds[i])
 
-    def save_attributes(self):
-        Logger.debug("Saving PSO attributes")
-        pso_attributes = {
-            'lower_bounds': self.lower_bounds,
-            'upper_bounds': self.upper_bounds,
-            'num_particles': self.num_particles,
-            'num_params': self.num_params,
-            'inertia_weight': self.inertia_weight,
-            'cognitive_coefficient': self.cognitive_coefficient,
-            'social_coefficient': self.social_coefficient,
-            'iteration': self.iteration
-        }
-        FileManager.save_json(pso_attributes, "checkpoint/pso_attributes.json")
-
     def save_state(self):
-        Logger.debug("Saving PSO state")
+        Logger.debug("Saving MOPSO state")
+        FileManager.save_pickle(self, "checkpoint/mopso.json")
+
+    def export_state(self):
+        Logger.debug("Exporting MOPSO state")
         FileManager.save_csv([np.concatenate([particle.position,
                                               particle.velocity])
                              for particle in self.particles],
@@ -162,60 +152,9 @@ class MOPSO(Optimizer):
                              for particle in self.pareto_front],
                              'checkpoint/pareto_front.csv')
 
-    def load_checkpoint(self):
-        # load saved data
+    def load_state(self):
         Logger.debug("Loading checkpoint")
-        
-        pso_attributes = FileManager.load_json(
-            'checkpoint/pso_attributes.json')
-        individual_states = FileManager.load_csv(
-            'checkpoint/individual_states.csv')
-        pareto_front = FileManager.load_csv('checkpoint/pareto_front.csv')
-
-        # restore pso attributes
-        Logger.debug("Restoring PSO attributes")
-        self.lower_bounds = pso_attributes['lower_bounds']
-        self.upper_bounds = pso_attributes['upper_bounds']
-        self.num_particles = pso_attributes['num_particles']
-        self.num_params = pso_attributes['num_params']
-        self.inertia_weight = pso_attributes['inertia_weight']
-        self.cognitive_coefficient = pso_attributes['cognitive_coefficient']
-        self.social_coefficient = pso_attributes['social_coefficient']
-        self.iteration = pso_attributes['iteration']
-
-        # restore particles
-        Logger.debug("Restoring particles")
-        self.particles = []
-        for i in range(self.num_particles):
-            particle = Particle(self.lower_bounds, self.upper_bounds,
-                                num_objectives=self.objective.num_objectives,
-                                num_particles=self.num_particles)
-            particle.set_state(
-                position=np.array(
-                    individual_states[i][:self.num_params], dtype=float),
-                velocity=np.array(
-                    individual_states[i][self.num_params:2*self.num_params], dtype=float),
-                best_position=np.array(
-                    individual_states[i][2*self.num_params:3*self.num_params], dtype=float),
-                fitness=[np.inf] * self.objective.num_objectives,
-                best_fitness=np.array(
-                    individual_states[i][3*self.num_params:], dtype=float)
-            )
-            self.particles.append(particle)
-
-        # restore pareto front
-        Logger.debug("Restoring pareto front")
-        self.pareto_front = []
-        for i in range(len(pareto_front)):
-            particle = Particle(self.lower_bounds, self.upper_bounds,
-                                num_objectives=self.objective.num_objectives,
-                                num_particles=self.num_particles)
-            particle.set_state(position=pareto_front[i][:self.num_params],
-                               fitness=pareto_front[i][self.num_params:],
-                               velocity=None,
-                               best_position=None,
-                               best_fitness=None)
-            self.pareto_front.append(particle)
+        self = FileManager.load_pickle("checkpoint/mopso.json")
 
     def step(self):
         Logger.debug(f"Iteration {self.iteration}")
@@ -247,8 +186,8 @@ class MOPSO(Optimizer):
             self.step()
         Logger.info("MOPSO optimization finished")
 
-        self.save_attributes()
         self.save_state()
+        self.export_state()
 
         return self.pareto_front
 

@@ -4,6 +4,7 @@ import json
 import numpy as np
 import logging
 from numba import njit
+import pickle
 
 class CustomFormatter(logging.Formatter):
 
@@ -94,6 +95,28 @@ class FileManager:
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
         with open(full_path) as f:
             return json.load(f)
+    
+    @classmethod
+    def save_pickle(cls, object, filename):
+        if not cls.saving_enabled:
+            Logger.debug("Saving is disabled.")
+            return
+        full_path = os.path.join(cls.working_dir, filename)
+        folder = os.path.dirname(full_path)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        Logger.debug(f"Saving to '{full_path}'")
+        with open(full_path, 'w') as f:
+            pickle.dump(object, f)
+    
+    @classmethod
+    def load_pickle(cls, filename):
+        full_path = os.path.join(cls.working_dir, filename)
+        Logger.debug(f"Loading from '{full_path}'")
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"The file '{full_path}' does not exist.")
+        with open(full_path) as f:
+            return pickle.load(f)
 
 @njit
 def get_dominated(particles, pareto_lenght):
