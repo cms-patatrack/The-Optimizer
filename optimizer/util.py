@@ -1,10 +1,10 @@
 import os
 import sys
 import json
-import numpy as np
 import logging
-from numba import njit
 import pickle
+import numpy as np
+from numba import njit
 
 
 class CustomFormatter(logging.Formatter):
@@ -14,14 +14,14 @@ class CustomFormatter(logging.Formatter):
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    string_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
 
     FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: grey + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
+        logging.DEBUG: grey + string_format + reset,
+        logging.INFO: grey + string_format + reset,
+        logging.WARNING: yellow + string_format + reset,
+        logging.ERROR: red + string_format + reset,
+        logging.CRITICAL: bold_red + string_format + reset
     }
 
     def format(self, record):
@@ -124,9 +124,8 @@ class FileManager:
         with open(full_path, 'rb') as f:
             return pickle.load(f)
 
-# @njit
 
-
+@njit
 def get_dominated(particles, pareto_lenght):
     dominated_particles = np.full(len(particles), False)
     for i in range(len(particles)):

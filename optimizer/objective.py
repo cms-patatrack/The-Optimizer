@@ -12,7 +12,6 @@ class Objective():
             self.num_objectives = len(self.objective_functions)
         else:
             self.num_objectives = num_objectives
-        pass
 
     def evaluate(self, items):
         result = [objective_function(items)
@@ -31,9 +30,6 @@ class Objective():
 
 
 class ElementWiseObjective(Objective):
-    def __init__(self, objective_functions, num_objectives=None) -> None:
-        super().__init__(objective_functions, num_objectives)
-
     def evaluate(self, items):
         result = [[obj_func(item) for item in items]
                   for obj_func in self.objective_functions]
@@ -48,5 +44,4 @@ class ElementWiseObjective(Objective):
 
 
 class BatchObjective(Objective):
-    def __init__(self, objective_functions, num_objectives=None) -> None:
-        super().__init__(objective_functions, num_objectives)
+    pass
