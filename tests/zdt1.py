@@ -6,13 +6,13 @@ import matplotlib.animation as animation
 import os
 
 num_agents = 100
-num_iterations = 200
+num_iterations = 500
 num_params = 30
 
 lb = [0.] * num_params
 ub = [1.] * num_params
 
-optimizer.Logger.setLevel('INFO')
+optimizer.Logger.setLevel('DEBUG')
 
 def zdt1_objective1(x):
     return x[0]
@@ -26,7 +26,7 @@ def zdt1_objective2(x):
     return f2
 
 
-optimizer.Randomizer.rng = np.random.default_rng(42)
+optimizer.Randomizer.rng = np.random.default_rng(46)
 
 optimizer.FileManager.working_dir = "tmp/zdt1/"
 optimizer.FileManager.loading_enabled = False
@@ -36,7 +36,8 @@ objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
-                      inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, initial_particles_position='random', incremental_pareto=True)
+                      inertia_weight=0.4, cognitive_coefficient=1.5, social_coefficient=2,
+                      initial_particles_position='random', incremental_pareto=True)
 
 # run the optimization algorithm
 pso.optimize(num_iterations)

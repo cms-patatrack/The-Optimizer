@@ -12,7 +12,7 @@ num_params = 10
 lb = [0.] + [-5.] * (num_params - 1)
 ub = [1.] + [5.] * (num_params - 1)
 
-optimizer.Logger.setLevel('DEBUG')
+optimizer.Logger.setLevel('INFO')
 
 optimizer.Randomizer.rng = np.random.default_rng(46)
 

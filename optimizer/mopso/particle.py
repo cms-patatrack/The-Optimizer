@@ -20,27 +20,25 @@ class Particle:
         fitness (numpy.ndarray): Current fitness values of the particle.
     """
 
-    def __init__(self, lower_bound, upper_bound, num_objectives, num_particles, id, topology):
+    def __init__(self, lower_bound, num_objectives, num_particles, id, topology):
         self.position = np.asarray(lower_bound)
         self.num_objectives = num_objectives
         self.num_particles = num_particles
         self.velocity = np.zeros_like(self.position)
-        self.best_position = self.position
-        self.best_fitness = np.array([np.inf]*self.num_objectives)
-        self.fitness = np.ones(self.num_objectives)
+
+        self.fitness = np.full(self.num_objectives, np.inf)
+        self.local_best_fitnesses = []
+        self.local_best_positions = []
+        self.iterations_with_no_improvement = 0
         self.id = id
         self.topology = topology
-        self.fitness = np.full(self.num_objectives, np.inf)
-        self.local_pareto_fitnesses = []
-        self.local_pareto_positions = []
-        self.len_local_pareto = []
 
     def update_velocity(self,
-                        pareto_front, crowding_distances, inertia_weight=0.5,
-                        cognitive_coefficient=1, social_coefficient=1,):
-
-        # cognitive_coefficient = Randomizer.rng.uniform(1.5, 2)
-        # social_coefficient = Randomizer.rng.uniform(1.5, 2)
+                        pareto_front,
+                        crowding_distances,
+                        inertia_weight=0.5,
+                        cognitive_coefficient=1, 
+                        social_coefficient=1):
         """
         Update the particle's velocity based on its best position and the global best position.
 
@@ -54,7 +52,7 @@ class Particle:
                                         (default is 1).
         """
         leader = self.get_pareto_leader(pareto_front, crowding_distances)
-        best_position = Randomizer.rng.choice(self.local_pareto_positions)
+        best_position = Randomizer.rng.choice(self.local_best_positions)
         cognitive_random = Randomizer.rng.uniform(0, 1)
         social_random = Randomizer.rng.uniform(0, 1)
         cognitive = cognitive_coefficient * cognitive_random * \
@@ -104,15 +102,21 @@ class Particle:
         """
         Update particle's fitness and best position
         """
-        len_fitness = len(self.local_pareto_fitnesses)
-        fitnesses = np.array([f for f in self.local_pareto_fitnesses] + [self.fitness])
-        positions = np.array([p for p in self.local_pareto_positions] + [self.position])
+        len_fitness = len(self.local_best_fitnesses)
+        fitnesses = np.array([f for f in self.local_best_fitnesses] + [self.fitness])
+        positions = np.array([p for p in self.local_best_positions] + [self.position])
 
         dominated = get_dominated(fitnesses, len_fitness)
 
-        self.local_pareto_fitnesses = [fitnesses[i] for i in range(len(fitnesses)) if not dominated[i]]
-        self.local_pareto_positions = [positions[i] for i in range(len(positions)) if not dominated[i]]
-        self.len_local_pareto.append(len(self.local_pareto_fitnesses))
+        new_local_best_fitnesses = [fitnesses[i] for i in range(len(fitnesses)) if not dominated[i]]
+        
+        # if the new fitness is different from the old one, reset the counter
+        if np.array_equal(new_local_best_fitnesses, self.local_best_fitnesses):
+            self.iterations_with_no_improvement += 1
+        else:
+            self.iterations_with_no_improvement = 0
+        self.local_best_fitnesses = new_local_best_fitnesses
+        self.local_best_positions = [positions[i] for i in range(len(positions)) if not dominated[i]]
 
     def get_pareto_leader(self, pareto_front, crowding_distances):
         if self.topology == "random":

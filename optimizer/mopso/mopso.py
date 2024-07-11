@@ -13,9 +13,8 @@ class MOPSO(Optimizer):
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
-                 incremental_pareto=True, initial_particles_position='random', default_point=None, topology = "random", seed =42):
-        
-        # Randomizer.rng = np.random.default_rng(42)  
+                 incremental_pareto=True, initial_particles_position='random', default_point=None,
+                 exploring_particles=False, topology = 'random'):
         self.objective = objective
         if FileManager.loading_enabled:
             try:
@@ -39,8 +38,10 @@ class MOPSO(Optimizer):
         self.inertia_weight = inertia_weight
         self.cognitive_coefficient = cognitive_coefficient
         self.social_coefficient = social_coefficient
-        self.particles = [Particle(lower_bounds, upper_bounds, objective.num_objectives, num_particles, id, topology)
-                          for id in range(num_particles)]
+        self.particles = [Particle(lower_bounds, objective.num_objectives, num_particles)
+                          for _ in range(num_particles)]
+        
+        self.exploring_particles = exploring_particles
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'spread', 'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
         
@@ -223,9 +224,7 @@ class MOPSO(Optimizer):
     def save_state(self):
         Logger.debug("Saving PSO state")
         FileManager.save_csv([np.concatenate([particle.position,
-                                              particle.velocity,
-                                              particle.best_position,
-                                              np.ravel(particle.best_fitness)])
+                                              particle.velocity])
                              for particle in self.particles],
                              'checkpoint/individual_states.csv')
 
@@ -303,10 +302,12 @@ class MOPSO(Optimizer):
 
         for particle in self.particles:
             particle.update_velocity(self.pareto_front,
-                                        crowding_distances,
-                                        self.inertia_weight,
-                                        self.cognitive_coefficient,
-                                        self.social_coefficient)
+                                     crowding_distances,
+                                     self.inertia_weight,
+                                     self.cognitive_coefficient,
+                                     self.social_coefficient)
+            if self.exploring_particles and particle.iterations_with_no_improvement > 10:
+                self.scatter_particle(particle)
             particle.update_position(self.lower_bounds, self.upper_bounds)
 
         self.iteration += 1
@@ -330,13 +331,9 @@ class MOPSO(Optimizer):
             [particle.fitness for particle in particles])
         dominanted = get_dominated(particle_fitnesses, pareto_lenght)
         
-        # if self.incremental_pareto or np.sum(dominanted) < max_pareto_len:
-        # cum_sum = np.cumsum( not dominanted)
-        # index = np.argwhere(cum_sum ==  max_pareto_len)
         self.pareto_front =[copy(particles[i]) for i in range(len(particles)) if not dominanted[i]]
         crowding_distances = self.calculate_crowding_distance(self.pareto_front)
         self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=True)
-        # self.pareto_front.sort(key=lambda x: crowding_distances[x], reverse=False)
 
         max_pareto_len = 500
         self.pareto_front = self.pareto_front[: max_pareto_len]
@@ -348,33 +345,36 @@ class MOPSO(Optimizer):
     def calculate_crowding_distance(self, pareto_front):
         if len(pareto_front) == 0:
             return []
-
         num_objectives = len(np.ravel(pareto_front[0].fitness))
         distances = [0] * len(pareto_front)
         point_to_distance = {}
-
         for i in range(num_objectives):
             # Sort by objective i
             sorted_front = sorted(
                 pareto_front, key=lambda x: np.ravel(x.fitness)[i])
-
             # Set the boundary points to infinity
             distances[0] = float('inf')
             distances[-1] = float('inf')
-
             # Normalize the objective values for calculation
             min_obj = np.ravel(sorted_front[0].fitness)[i]
             max_obj = np.ravel(sorted_front[-1].fitness)[i]
             norm_denom = max_obj - min_obj if max_obj != min_obj else 1
-
             for j in range(1, len(pareto_front) - 1):
                 distances[j] += (np.ravel(sorted_front[j + 1].fitness)[i] -
                                  np.ravel(sorted_front[j - 1].fitness)[i]) / norm_denom
-
         for i, point in enumerate(pareto_front):
             point_to_distance[point] = distances[i]
-
         return point_to_distance
+
+    def scatter_particle(self, particle: Particle):
+        Logger.debug(f"Particle {particle} did not improve for 10 iterations. Scattering.")
+        for i in range(len(self.lower_bounds)):
+            lower_count = sum([1 for p in self.particles if p.position[i] < particle.position[i]])
+            upper_count = sum([1 for p in self.particles if p.position[i] > particle.position[i]])
+            if lower_count > upper_count:
+                particle.velocity[i] = 1
+            else:
+                particle.velocity[i] = -1
 
 
 
