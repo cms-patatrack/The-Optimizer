@@ -33,7 +33,7 @@ optimizer.FileManager.saving_enabled = False
 
 objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
 
-topologies = ['round_robin'
+topologies = ['lower_weighted_crowding_distance'
             # 'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
             # 'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring', 
             # 'lower_crowding_distance_random_ring'

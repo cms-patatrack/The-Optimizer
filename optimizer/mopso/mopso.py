@@ -4,9 +4,9 @@ import math
 import numpy as np
 import math
 from optimizer import Optimizer, FileManager, Randomizer, Logger
-from numba import njit, jit
 import scipy.stats as stats
 from .particle import Particle
+from util import get_dominated
 
 class MOPSO(Optimizer):
     def __init__(self,
@@ -375,18 +375,6 @@ class MOPSO(Optimizer):
             point_to_distance[point] = distances[i]
 
         return point_to_distance
-
-@njit
-def get_dominated(particles, pareto_lenght):
-    dominated_particles = np.full(len(particles), False)
-    for i in range(len(particles)):
-        for j in range(len(particles)):
-            if (i < pareto_lenght and j < pareto_lenght) or i == j: continue
-            if np.any(particles[i] > particles[j]) and \
-                    np.all(particles[i] >= particles[j]):
-                dominated_particles[i] = True
-                break
-    return dominated_particles
 
 
 

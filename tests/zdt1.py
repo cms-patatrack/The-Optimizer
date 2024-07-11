@@ -60,7 +60,7 @@ plt.close()
 
 lengths = [[] for i in range(num_agents)]
 for i in range(num_agents):
-    lengths[i] = pso.particles[i].len_local_pareto
+    lengths[i] = pso.particles[i].len_local_pareto[0:50]
 
 plt.figure()
 plt.imshow(lengths)

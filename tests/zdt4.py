@@ -6,7 +6,7 @@ import matplotlib.animation as animation
 import os
 
 num_agents = 100
-num_iterations = 2500
+num_iterations = 600
 num_params = 10
 
 lb = [0.] + [-5.] * (num_params - 1)
