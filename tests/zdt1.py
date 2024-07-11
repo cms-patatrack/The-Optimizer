@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
 
+import warnings
+warnings.filterwarnings("error")
+
 num_agents = 100
 num_iterations = 100
 num_params = 30
@@ -21,6 +24,7 @@ def zdt1_objective(x):
     f2 = g * h
     return f1, f2
 
+use_reinforcement_learning = 0
 
 optimizer.Randomizer.rng = np.random.default_rng(46)
 

@@ -5,3 +5,4 @@ from .util import FileManager, Randomizer, Logger
 from .optimizer import Optimizer
 from .objective import Objective, ElementWiseObjective, BatchObjective
 from .mopso.mopso import MOPSO
+from .metrics import *
