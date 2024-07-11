@@ -15,12 +15,14 @@ class MOPSO(Optimizer):
                  lower_bounds, upper_bounds, num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  initial_particles_position='random', default_point=None,
-                 exploring_particles=False, topology='random'):
+                 exploring_particles=False, topology='random',
+                 max_pareto_lenght=-1):
         self.objective = objective
         self.num_particles = num_particles
         self.particles = []
         self.iteration = 0
         self.pareto_front = []
+        self.max_pareto_lenght = max_pareto_lenght
         if FileManager.loading_enabled:
             try:
                 self.load_state()
@@ -160,7 +162,7 @@ class MOPSO(Optimizer):
         obj = FileManager.load_pickle("checkpoint/mopso.pkl")
         self.__dict__ = obj.__dict__
 
-    def step(self):
+    def step(self, max_iterations_without_improvement=None):
         Logger.debug(f"Iteration {self.iteration}")
         optimization_output = self.objective.evaluate(
             [particle.position for particle in self.particles])
@@ -178,15 +180,15 @@ class MOPSO(Optimizer):
                                      self.inertia_weight,
                                      self.cognitive_coefficient,
                                      self.social_coefficient)
-            if self.exploring_particles and particle.iterations_with_no_improvement > 10:
+            if self.exploring_particles and max_iterations_without_improvement and particle.iterations_with_no_improvement >= max_iterations_without_improvement:
                 self.scatter_particle(particle)
             particle.update_position(self.lower_bounds, self.upper_bounds)
         self.iteration += 1
 
-    def optimize(self, num_iterations=100, max_iter_no_improv=None):
+    def optimize(self, num_iterations=100, max_iterations_without_improvement=None):
         Logger.info(f"Starting MOPSO optimization from iteration {self.iteration} to {num_iterations}")
         for _ in range(self.iteration, num_iterations):
-            self.step()
+            self.step(max_iterations_without_improvement)
         self.save_state()
         self.export_state()
 
@@ -207,8 +209,9 @@ class MOPSO(Optimizer):
         self.pareto_front.sort(
             key=lambda x: crowding_distances[x], reverse=True)
 
-        max_pareto_len = 500
-        self.pareto_front = self.pareto_front[: max_pareto_len]
+        if self.max_pareto_lenght > 0:
+            self.pareto_front = self.pareto_front[: self.max_pareto_lenght]
+            
         Logger.debug(f"New pareto front size: {len(self.pareto_front)}")
 
         crowding_distances = self.calculate_crowding_distance(
