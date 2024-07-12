@@ -67,7 +67,7 @@ def observe_list(pso, good_points_positions, bad_points_positions, radius, max_d
             particle_observation = [
                         bad_points_in_sphere,
                         good_points_in_sphere,
-                        particle.iterations_from_best_position,
+                        particle.iterations_with_no_improvement,
                         mean_distance,
                         progress,
                         # distance_good_points,

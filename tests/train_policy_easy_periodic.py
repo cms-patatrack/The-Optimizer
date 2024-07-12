@@ -41,7 +41,7 @@ def main():
 
     pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                         num_particles=num_agents,
-                        inertia_weight=0.6, cognitive_coefficient=0.5, social_coefficient=1, initial_particles_position='random', incremental_pareto=True, 
+                        inertia_weight=0.6, cognitive_coefficient=0.5, social_coefficient=1, initial_particles_position='random', 
                         rl_model=None)
 
     env_fn = pso_environment_AEC
@@ -53,7 +53,7 @@ def main():
                 'render_mode' : 'None'
                     }
 
-    train(env_fn, steps=2000000, seed=0, **env_kwargs)
+    train(env_fn, steps=5000000, seed=0, **env_kwargs)
 
 if __name__ == "__main__":
     main()

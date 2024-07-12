@@ -20,7 +20,7 @@ def train(env_fn, steps: int = 1e4, seed: int = 0, **env_kwargs):
     print("Action Space:", env.action_space)
 
     policy_kwargs = dict(activation_fn=th.nn.Tanh,
-                     net_arch=dict(pi=[10, 5], vf=[10, 5]))
+                     net_arch=dict(pi=[5, 5], vf=[5, 5]))
     
     model = PPO(
         MaskedActorCriticPolicy,
