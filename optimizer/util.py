@@ -64,9 +64,9 @@ class FileManager:
         full_path = os.path.join(cls.working_dir, filename)
         folder = os.path.dirname(full_path)
         if not os.path.exists(folder):
-            Logger.debug(f"Creating folder '{folder}'")
+            Logger.debug("Creating folder '%s'",folder)
             os.makedirs(folder)
-        Logger.debug(f"Saving to '{full_path}'")
+        Logger.debug("Saving to '%s'",full_path)
         np.savetxt(full_path,
                    csv_list,
                    fmt='%.18f',
@@ -81,14 +81,14 @@ class FileManager:
         folder = os.path.dirname(full_path)
         if not os.path.exists(folder):
             os.makedirs(folder)
-        Logger.debug(f"Saving to '{full_path}'")
-        with open(full_path, 'w') as f:
+        Logger.debug("Saving to '%s'", full_path)
+        with open(full_path, 'w', encoding='utf-8') as f:
             json.dump(dictionary, f, indent=4)
 
     @classmethod
     def load_csv(cls, filename):
         full_path = os.path.join(cls.working_dir, filename)
-        Logger.debug(f"Loading from '{full_path}'")
+        Logger.debug("Loading from '%s'", full_path)
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
         return np.genfromtxt(full_path, delimiter=',', dtype=float)
@@ -96,14 +96,14 @@ class FileManager:
     @classmethod
     def load_json(cls, filename):
         full_path = os.path.join(cls.working_dir, filename)
-        Logger.debug(f"Loading from '{full_path}'")
+        Logger.debug("Loading from '%s'", full_path)
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
-        with open(full_path) as f:
+        with open(full_path, encoding='utf-8') as f:
             return json.load(f)
 
     @classmethod
-    def save_pickle(cls, object, filename):
+    def save_pickle(cls, obj, filename):
         if not cls.saving_enabled:
             Logger.debug("Saving is disabled.")
             return
@@ -111,29 +111,29 @@ class FileManager:
         folder = os.path.dirname(full_path)
         if not os.path.exists(folder):
             os.makedirs(folder)
-        Logger.debug(f"Saving to '{full_path}'")
-        with open(full_path, 'wb') as f:
-            pickle.dump(object, f)
+        Logger.debug("Saving to '%s'", full_path)
+        with open(full_path, 'wb', encoding='utf-8') as f:
+            pickle.dump(obj, f)
 
     @classmethod
     def load_pickle(cls, filename):
         full_path = os.path.join(cls.working_dir, filename)
-        Logger.debug(f"Loading from '{full_path}'")
+        Logger.debug("Loading from '%s'", full_path)
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
-        with open(full_path, 'rb') as f:
+        with open(full_path, 'rb', encoding='utf-8') as f:
             return pickle.load(f)
 
 
 @njit
 def get_dominated(particles, pareto_lenght):
     dominated_particles = np.full(len(particles), False)
-    for i in range(len(particles)):
-        for j in range(len(particles)):
+    for i, pi in enumerate(particles):
+        for j, pj in enumerate(particles):
             if (i < pareto_lenght and j < pareto_lenght) or i == j:
                 continue
-            if np.any(particles[i] > particles[j]) and \
-                    np.all(particles[i] >= particles[j]):
+            if np.any(pi > pj) and \
+                    np.all(pi >= pj):
                 dominated_particles[i] = True
                 break
     return dominated_particles
