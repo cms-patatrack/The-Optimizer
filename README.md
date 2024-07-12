@@ -119,6 +119,46 @@ The Multi-Objective Particle Swarm Optimization (MOPSO) algorithm is a versatile
 
 See the docstring for additional information on the parameters.
 
+### Checkpoint system
+
+The optimizer can be run using the `optimize` method for a specific number of iterations, or it can also be run interactively by calling the `step` function to perform a single iteration.
+
+In addition the optimizer allows to stop the execution, saving the state, and restore the execution from the leftover run.
+
+To do this, first enable saving and enabling using the `FileManager` helper class:
+
+```python
+optimizer.FileManager.working_dir = "tmp/zdt1/"
+optimizer.FileManager.loading_enabled = True
+optimizer.FileManager.saving_enabled = True
+```
+
+After launching `optimize` the state of the optimizer will be saved in the `mopso.pkl` file inside the working directory.
+
+A new run of the script will attempt to load the file and restart the execution from the iteration it was stopped at.
+
+For example, if you run optimize until iteration 100, save and then rerun till iteration 200, the optimizer will call the step function for iteration 101 to 200.
+
+The saving option allow also to export the state of the particles in every iteration inside a `history` directory in the working directory.
+
+### Random
+
+The MOPSO optimizer heavily relies on randomnumber generation. To make sure to obtain reproducible results an helper function allows to set the seed for every random generation performed by the algortihm:
+
+```python
+optimizer.Randomizer.rng = np.random.default_rng(42)
+```
+
+### Logging
+
+You can configure the amount of logging information printed on terminal with:
+
+```python
+optimizer.Logger.setLevel('DEBUG')
+```
+
+The supported levels - from least to most verbose - are: `ERROR`, `WARN`, `INFO`, `DEBUG`
+
 ## Contributing
 
 Contributions are welcome. If you want to contribute, please follow the [Contribution guidelines](CONTRIBUTING.md).
