@@ -280,10 +280,8 @@ class MOPSO(Optimizer):
                 [1 for p in self.particles if p.position[i] < particle.position[i]])
             upper_count = sum(
                 [1 for p in self.particles if p.position[i] > particle.position[i]])
-            # lower_percentage = lower_count / len(self.particles)
-            # upper_percentage = upper_count / len(self.particles)
-            lower_density = lower_count * (particle.position[i] - self.lower_bounds[i])
-            upper_density = upper_count * (self.upper_bounds[i] - particle.position[i])
+            lower_density = lower_count * (particle.position[i] - self.lower_bounds[i])/(self.upper_bounds[i]- self.lower_bounds[i])
+            upper_density = upper_count * (self.upper_bounds[i] - particle.position[i])/(self.upper_bounds[i]- self.lower_bounds[i])
             if lower_density > upper_density:
                 particle.velocity[i] = 0.5 * abs(self.upper_bounds[i] - particle.position[i])
             else:
