@@ -10,6 +10,39 @@ from optimizer.util import get_dominated
 
 
 class MOPSO(Optimizer):
+    """
+    Multi-Objective Particle Swarm Optimization (MOPSO) algorithm.
+
+    Parameters:
+    - objective (Objective): The objective function to be optimized.
+    - lower_bounds (list): The lower bounds for each parameter.
+    - upper_bounds (list): The upper bounds for each parameter.
+    - num_particles (int): The number of particles in the swarm (default: 50).
+    - inertia_weight (float): The inertia weight for particle velocity update (default: 0.5).
+    - cognitive_coefficient (float): The cognitive coefficient for particle velocity update (default: 1).
+    - social_coefficient (float): The social coefficient for particle velocity update (default: 1).
+    - initial_particles_position (str): The method for initializing particle positions (default: 'random').
+        Valid options are: 'lower_bounds', 'upper_bounds', 'random', 'gaussian'.
+    - default_point (list): The default point for initializing particles using Gaussian distribution (default: None).
+    - exploring_particles (bool): Whether to enable particle exploration (default: False).
+    - topology (str): The topology of the swarm (default: 'random').
+        Valid options are: 'random', 'lower_weighted_crowding_distance', 'round_robin'.
+    - max_pareto_length (int): The maximum length of the Pareto front (default: -1, unlimited).
+
+    Methods:
+    - optimize(num_iterations=100, max_iterations_without_improvement=None): Runs the MOPSO optimization algorithm for a specified number of iterations.
+    - step(max_iterations_without_improvement=None): Performs a single iteration of the MOPSO algorithm.
+    """
+
+    def __init__(self, objective, lower_bounds, upper_bounds, num_particles=50, inertia_weight=0.5,
+                 cognitive_coefficient=1, social_coefficient=1, initial_particles_position='random',
+                 default_point=None, exploring_particles=False, topology='random', max_pareto_length=-1):
+        """
+        Initializes the MOPSO algorithm with the specified parameters.
+        """
+        # Implementation details...
+class MOPSO(Optimizer):
+    
     def __init__(self,
                  objective,
                  lower_bounds, upper_bounds, num_particles=50,
@@ -53,9 +86,7 @@ class MOPSO(Optimizer):
             'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
         VALID_TOPOLOGIES = {
-            'random', 'higher_crowding_distance', 'lower_crowding_distance', 'higher_weighted_crowding_distance',
-            'lower_weighted_crowding_distance', 'round_robin', 'higher_crowding_distance_random_ring',
-            'lower_crowding_distance_random_ring'}
+            'random', 'lower_weighted_crowding_distance', 'round_robin'}
 
         if topology not in VALID_TOPOLOGIES:
             raise ValueError(
