@@ -1,6 +1,5 @@
 from copy import copy, deepcopy
 import itertools
-import math
 import numpy as np
 import math
 from optimizer import Optimizer, FileManager, Randomizer, Logger
