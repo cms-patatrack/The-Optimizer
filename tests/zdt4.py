@@ -5,14 +5,14 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
 
-num_agents = 100
+num_agents = 200
 num_iterations = 600
 num_params = 10
 
 lb = [0.] + [-5.] * (num_params - 1)
 ub = [1.] + [5.] * (num_params - 1)
 
-optimizer.Logger.setLevel('INFO')
+optimizer.Logger.setLevel('DEBUG')
 
 optimizer.Randomizer.rng = np.random.default_rng(46)
 
@@ -29,7 +29,7 @@ def zdt4_objective2(x):
 
 optimizer.FileManager.working_dir = "tmp/zdt4/"
 optimizer.FileManager.loading_enabled = False
-optimizer.FileManager.saving_enabled = False
+optimizer.FileManager.saving_enabled = True
 
 if not os.path.exists(optimizer.FileManager.working_dir):
     os.makedirs(optimizer.FileManager.working_dir)
@@ -38,7 +38,7 @@ objective = optimizer.ElementWiseObjective([zdt4_objective1, zdt4_objective2])
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
-                      inertia_weight=0.4, cognitive_coefficient=1.5, social_coefficient=2,
+                      inertia_weight=0.1, cognitive_coefficient=1, social_coefficient=0.5,
                       initial_particles_position='random', topology = 'random',
                       exploring_particles=True, max_pareto_lenght=2*num_agents)
 
@@ -57,4 +57,25 @@ real_y = 1 - np.sqrt(real_x)
 plt.scatter(real_x, real_y, s=5, c='red')
 plt.scatter(pareto_x, pareto_y, s=5)
 
-plt.savefig(optimizer.FileManager.working_dir + 'pf.png')
+plt.savefig(optimizer.FileManager.working_dir + 'pf_with_exploration.png')
+
+metrics = [pd.read_csv('tmp/zdt4/history/iteration' + str(i) + '.csv',
+                       header=None,
+                       usecols=[num_params, num_params + 1]).transpose().to_numpy()
+           for i in range(num_iterations)]
+
+
+fig, ax = plt.subplots()
+
+def animate(i):
+    fig.clear()
+    ax = fig.add_subplot(111)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 50)
+    ax.scatter(metrics[i][0], metrics[i][1], c='red', s=10)
+    ax.set_title(str(i))
+
+
+ani = animation.FuncAnimation(
+    fig, animate, interval=200, frames=range(num_iterations))
+ani.save('tmp/zdt4/checkpoint/metrics.gif', writer='pillow')

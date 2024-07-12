@@ -212,6 +212,7 @@ class MOPSO(Optimizer):
                                      self.cognitive_coefficient,
                                      self.social_coefficient)
             if self.exploring_particles and max_iterations_without_improvement and particle.iterations_with_no_improvement >= max_iterations_without_improvement:
+                Logger.debug(f"Particle {particle} did not improve for {max_iterations_without_improvement} iterations. Scattering.")
                 self.scatter_particle(particle)
             particle.update_position(self.lower_bounds, self.upper_bounds)
         self.iteration += 1
@@ -274,14 +275,19 @@ class MOPSO(Optimizer):
         return point_to_distance
 
     def scatter_particle(self, particle: Particle):
-        Logger.debug(
-            f"Particle {particle} did not improve for 10 iterations. Scattering.")
         for i in range(len(self.lower_bounds)):
             lower_count = sum(
                 [1 for p in self.particles if p.position[i] < particle.position[i]])
             upper_count = sum(
                 [1 for p in self.particles if p.position[i] > particle.position[i]])
-            if lower_count > upper_count:
-                particle.velocity[i] = 1
+            # lower_percentage = lower_count / len(self.particles)
+            # upper_percentage = upper_count / len(self.particles)
+            lower_density = lower_count * (particle.position[i] - self.lower_bounds[i])
+            upper_density = upper_count * (self.upper_bounds[i] - particle.position[i])
+            if lower_density > upper_density:
+                particle.velocity[i] = 0.5 * abs(self.upper_bounds[i] - particle.position[i])
             else:
-                particle.velocity[i] = -1
+                particle.velocity[i] = - 0.5 * abs(particle.position[i] - self.lower_bounds[i])
+        particle.local_best_fitnesses = []
+        particle.local_best_positions = []
+        particle.iterations_with_no_improvement = 0
