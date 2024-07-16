@@ -41,10 +41,10 @@ class pso_environment_base:
 
     def get_spaces(self):
         # Define the action and observation spaces for all of the agents
-        len_obs = 5
+        len_obs = 2
         low = np.array([0.] * len_obs)
-        high = np.array([self.num_agents * self.pso_iterations] * 2 + [self.pso_iterations, self.max_dist, 1])
-        obs_space = Box(low = low, high = high, shape = (5,), dtype=np.float32)
+        high = np.array([self.num_agents * self.pso_iterations] * 2)
+        obs_space = Box(low = low, high = high, shape = (2,), dtype=np.float32)
         act_space = Discrete(2)
 
         self.observation_space = [obs_space for i in range(self.num_agents)]

@@ -155,17 +155,16 @@ class MOPSO(Optimizer):
         # Reinforcement learning stuff
         self.use_rl = False
         self.rl_model = rl_model
-        if rl_model is not None:
+        self.evaluations = []
+        if self.rl_model is not None:
             self.use_rl = True
             self.max_dist = np.linalg.norm(np.array(self.upper_bounds) - np.array(self.lower_bounds))
             self.radius = 0.021 * self.max_dist if radius == None else radius
-            print("Radius ", self.radius)
             self.bad_points = []
-            self.evaluations = []
             self.bad_points_per_iteration = []
             self.pareto_points_per_iteration = []
 
-            if self.rl_model != "Random":
+            if self.rl_model != "random" and self.rl_model != "explainable":
                 self.model = PPO.load(rl_model)
             
 
@@ -225,7 +224,8 @@ class MOPSO(Optimizer):
         else:
             if len(mask) != self.num_particles:
                 raise Exception("Mask must be of length num_particles")
-            
+
+        self.evaluations.append(sum(mask))    
         optimization_output = self.objective.evaluate(
             [particle.position for particle in self.particles], mask)
         # self.remove_inf(mask)
@@ -266,13 +266,22 @@ class MOPSO(Optimizer):
                 break
             mask = None
             if self.use_rl:
-                observations = observe_list(self.particles,
+                observations = observe_list(self,
                             np.array([p.position for p in self.pareto_front]),
                             np.array(self.bad_points),
-                            self.radius
+                            self.radius,
+                            self.max_dist,
+                            self.num_iterations
                             )
                 # print("obs ", observations)
-                if self.rl_model != "Random":
+                if self.rl_model == "explainable":
+                    mask = np.full(self.num_particles, True)
+                    for i in range(self.num_particles):
+                        num_bad_points = observations[i][0]
+                        num_pareto_points = observations[i][1]
+                        if num_bad_points > 0 and num_pareto_points / num_bad_points < 5:
+                            mask[i] = False
+                elif self.rl_model != "random":
                     mask = np.array(self.model.predict(observations, deterministic=True)[0], dtype = bool)
                 else:
                     mask = np.random.randint(0, 2, self.num_particles, dtype=bool)
@@ -280,10 +289,9 @@ class MOPSO(Optimizer):
                         if observations[i][0] == 0 and observations[i][1] == 0:
                             mask[i] = True
                 # print(mask)
-                self.evaluations.append(np.sum(mask))
                 self.bad_points_per_iteration.append(np.sum(observations, axis = 0)[0])
-                self.pareto_points_per_iteration.append(np.sum(observations, axis = 0)[1])
-            self.step(max_iterations_without_improvement, mask = mask)
+                self.pareto_points_per_iteration.append(np.sum(observations, axis = 0)[1])    
+            self.step(max_iterations_without_improvement = max_iterations_without_improvement, mask = mask)
             pareto_len.append(len(self.pareto_front))
             # crowding_distances.append(list(self.calculate_crowding_distance(self.particles).values()))
             end_time = time.time()

@@ -42,7 +42,7 @@ def main():
     pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                         num_particles=num_agents,
                         inertia_weight=0.6, cognitive_coefficient=0.5, social_coefficient=1, initial_particles_position='random', 
-                        rl_model=None)
+                        exploring_particles = True, rl_model=None, topology = 'round_robin')
 
     env_fn = pso_environment_AEC
     env_kwargs = {'pso' : pso,

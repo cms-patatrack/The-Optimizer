@@ -14,7 +14,7 @@ from optimizer.masked_actor_critic import MaskedActorCriticPolicy
 def train(env_fn, steps: int = 1e4, seed: int = 0, **env_kwargs):
     env = env_fn.parallel_env(**env_kwargs)
     env = ss.pettingzoo_env_to_vec_env_v1(env)
-    env = ss.concat_vec_envs_v1(env, num_vec_envs = 1, num_cpus=1, base_class="stable_baselines3")
+    env = ss.concat_vec_envs_v1(env, num_vec_envs = 4, num_cpus=1, base_class="stable_baselines3")
     env.reset()
     print("Observation Space:", env.observation_space)
     print("Action Space:", env.action_space)
