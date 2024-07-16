@@ -7,6 +7,7 @@ from optimizer import Optimizer, FileManager, Randomizer, Logger
 import scipy.stats as stats
 from .particle import Particle
 from optimizer.util import get_dominated
+import time
 
 
 class MOPSO(Optimizer):
@@ -49,7 +50,7 @@ class MOPSO(Optimizer):
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology='random',
-                 max_pareto_lenght=-1):
+                 max_pareto_lenght=-1, time_limit = np.inf):
         self.objective = objective
         self.num_particles = num_particles
         self.particles = []
@@ -146,6 +147,7 @@ class MOPSO(Optimizer):
         if default_point is not None:
             self.particles[0].set_position(default_point)
         # Randomizer.rng = np.random.default_rng(seed)
+        self.time_limit = time_limit
 
     def check_types(self):
         lb_types = [type(lb) for lb in self.lower_bounds]
@@ -218,8 +220,12 @@ class MOPSO(Optimizer):
 
     def optimize(self, num_iterations=100, max_iterations_without_improvement=None):
         Logger.info(f"Starting MOPSO optimization from iteration {self.iteration} to {num_iterations}")
+        start_time = time.time()
         for _ in range(self.iteration, num_iterations):
             self.step(max_iterations_without_improvement)
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= self.time_limit: break
+        self.execution_time = elapsed_time    
         self.save_state()
         self.export_state()
 
