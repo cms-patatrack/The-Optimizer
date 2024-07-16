@@ -6,6 +6,7 @@ from optimizer import Optimizer, FileManager, Randomizer, Logger
 import scipy.stats as stats
 from .particle import Particle
 from optimizer.util import get_dominated
+import time
 
 from stable_baselines3 import PPO
 from optimizer.reinforcement_learning_utils import observe_list, find_new_bad_points
@@ -252,18 +253,14 @@ class MOPSO(Optimizer):
         self.iteration += 1
         return improving_evaluations
 
-    def optimize(self, num_iterations=100, max_iterations_without_improvement=None, max_time = np.inf):
+    def optimize(self, num_iterations=100, max_iterations_without_improvement=None, time_limit = np.inf):
         Logger.info("Starting MOPSO optimization")
         self.useful_evaluations = []
         pareto_len = []
         crowding_distances = []
         self.num_iterations = num_iterations
-        time_diff = 0
         start_time= time.time() 
         for _ in range(self.iteration, num_iterations):
-            if time_diff > max_time:
-                print("Max time reached")
-                break
             mask = None
             if self.use_rl:
                 observations = observe_list(self,
@@ -294,8 +291,9 @@ class MOPSO(Optimizer):
             self.step(max_iterations_without_improvement = max_iterations_without_improvement, mask = mask)
             pareto_len.append(len(self.pareto_front))
             # crowding_distances.append(list(self.calculate_crowding_distance(self.particles).values()))
-            end_time = time.time()
-            time_diff =  end_time - start_time
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= time_limit: break
+        self.execution_time = elapsed_time
 
         Logger.info("MOPSO optimization finished")
         self.save_state()
