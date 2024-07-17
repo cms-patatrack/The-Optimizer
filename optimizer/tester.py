@@ -8,11 +8,13 @@ import time
 from tqdm import tqdm
 import json
 from stable_baselines3 import PPO
+import plotly.graph_objs as go
+import plotly.io as pio
 
-def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = False, print_results_enabled = True, known_pareto=None, verbose = 0):
+def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = False, print_results_enabled = True, known_pareto=None, time_limit = np.inf, verbose = 0):
     results = {}
     for seed in tqdm(seeds, desc="Testing seed", unit="iter"):
-        result = test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, verbose = verbose)
+        result = test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit, verbose = verbose)
         results[f'{seed}'] = result
 
     if print_results_enabled: print_results(results)
@@ -26,7 +28,7 @@ def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point,
 
     return results
 
-def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, verbose = 0):
+def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit = np.inf, verbose = 0):
 
     if verbose > 0 : print(f"SEED {seed}")
 
@@ -42,7 +44,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           rl_model=None, radius=mopso_parameters['radius'])
 
     start_time_pso = time.time()                    
-    pso.optimize(num_iterations=num_iterations)
+    pso.optimize(num_iterations=num_iterations, time_limit=time_limit)
     end_time_pso = time.time()
     optimizers.append(pso)
 
@@ -55,7 +57,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           rl_model = rl_model, radius=mopso_parameters['radius'])
 
     start_time_pso_trained_policy = time.time() 
-    pso_trained_policy.optimize(num_iterations=num_iterations)
+    pso_trained_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
     end_time_pso_trained_policy = time.time() 
     optimizers.append(pso_trained_policy)
 
@@ -68,7 +70,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           rl_model='random', radius=mopso_parameters['radius'])
 
     start_time_pso_random_policy = time.time() 
-    pso_random_policy.optimize(num_iterations=num_iterations)
+    pso_random_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
     end_time_pso_random_policy = time.time()
     optimizers.append(pso_random_policy)
 
@@ -81,7 +83,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           rl_model='explainable', radius=mopso_parameters['radius'])
 
     start_time_pso_explainable_policy = time.time() 
-    pso_explainable_policy.optimize(num_iterations=num_iterations)
+    pso_explainable_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
     end_time_pso_explainable_policy = time.time()
     optimizers.append(pso_explainable_policy)
 
@@ -195,8 +197,55 @@ def plot_pareto_2d(paretos, seed, known_pareto = None):
     plt.savefig(f"./tests/paretos/Pareto_front_seed_{seed}.png")
     plt.close()
 
-def plot_pareto_3d(paretos, known_pareto = None):
-    pass 
+def plot_pareto_3d(paretos, seed, known_pareto = None):
+
+    colors = ['red', 'blue', 'green', 'yellow']
+    model_paretos = {'pareto_obj1' : [],
+                      'pareto_obj2' : [],
+                      'pareto_obj3' : [],
+                      }
+    ranges = np.empty((3,2))
+    ranges[:, 0] = np.inf
+    ranges[:, 1] = -np.inf
+
+    fig = go.Figure()
+
+    # if known_pareto is not None:
+    #     plt.scatter(known_pareto[0], known_pareto[1], c='red', s=5, label = 'Known pareto')
+
+    for i, mod in enumerate(paretos.keys()):
+        pareto = paretos[mod]
+        model_paretos ['pareto_obj1'] = [fitness[0] for fitness in pareto]
+        model_paretos ['pareto_obj2'] = [fitness[1] for fitness in pareto]
+        model_paretos ['pareto_obj3'] = [fitness[2] for fitness in pareto]
+        for j, k in enumerate(model_paretos.keys()):
+            min_pareto = np.min(model_paretos[k])
+            max_pareto = np.max(model_paretos[k])
+            if min_pareto < ranges[j][0]: ranges[j][0] = min_pareto
+            if max_pareto > ranges[j][1]: ranges[j][1] = max_pareto
+        
+        fig.add_trace(go.Scatter3d(
+                        x=pareto[0],
+                        y=pareto[1],
+                        z=pareto[2],
+                        mode='markers',
+                        marker=dict(
+                            size=5,
+                            color=colors[i],
+                            opacity=0.8
+                            )
+                        )
+                    #   go.Layout(
+                    #         scene=dict(
+                    #         xaxis=dict(title='Objective 1', range=ranges[0]),
+                    #         yaxis=dict(title='Objective 2', range=ranges[1]),
+                    #         zaxis=dict(title='Objective 3', range=ranges[2])
+                    #         )
+                    #     )
+
+                    )
+
+    pio.write_html(fig, file=f"./tests/paretos/Pareto_front_seed_{seed}.html", auto_open=True)
 
 def check_dict(results):
     if type(results) is not dict:

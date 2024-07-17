@@ -292,7 +292,9 @@ class MOPSO(Optimizer):
             pareto_len.append(len(self.pareto_front))
             # crowding_distances.append(list(self.calculate_crowding_distance(self.particles).values()))
             elapsed_time = time.time() - start_time
-            if elapsed_time >= time_limit: break
+            if elapsed_time >= time_limit:
+                print("Reached time limit") 
+                break
         self.execution_time = elapsed_time
 
         Logger.info("MOPSO optimization finished")

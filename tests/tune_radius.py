@@ -42,21 +42,23 @@ objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
 
 def main():
 
-    pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
-                        num_particles=num_agents,
-                        inertia_weight=0.4, cognitive_coefficient=4, social_coefficient=2, initial_particles_position='random', exploring_particles=False,
-                        rl_model=None)
+    for r in np.linspace(0.01, 0.1, 0.01):
+        pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
+                            num_particles=num_agents,
+                            inertia_weight=0.4, cognitive_coefficient=4, social_coefficient=2, initial_particles_position='random', exploring_particles=False,
+                            rl_model=None)
 
-    env_fn = pso_environment_AEC
-    env_kwargs = {'pso' : pso,
-                'pso_iterations' : num_iterations,
-                'metric_reward' : 3,
-                'evaluation_penalty' : -1,
-                'not_dominated_reward' : 2,
-                'render_mode' : 'None'
-                    }
-
-    train(env_fn, steps=2000000, seed=0, **env_kwargs)
+        env_fn = pso_environment_AEC
+        env_kwargs = {'pso' : pso,
+                    'pso_iterations' : num_iterations,
+                    'metric_reward' : 3,
+                    'evaluation_penalty' : -1,
+                    'not_dominated_reward' : 2,
+                    'radius_scaler' : 0.03,
+                    'render_mode' : 'None'
+                        }
+        name = f"./models/tune_radius/zdt1_radius_{env_kwargs['radius_scaler']}"
+        train(env_fn, steps=2000000, seed=0, name = name, **env_kwargs)
 
 if __name__ == "__main__":
     main()

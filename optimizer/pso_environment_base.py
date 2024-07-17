@@ -10,7 +10,7 @@ import optimizer
 
 
 class pso_environment_base:
-    def __init__(self, pso, pso_iterations, metric_reward, evaluation_penalty, not_dominated_reward, render_mode = None):
+    def __init__(self, pso, pso_iterations, metric_reward, evaluation_penalty, not_dominated_reward, radius_scaler = 0.03, render_mode = None):
         
         self.possible_pso = pso
         self.pso_iterations = pso_iterations
@@ -33,7 +33,7 @@ class pso_environment_base:
         lower_bounds = np.array(self.possible_pso.lower_bounds)
         self.num_parameters = len(lower_bounds)
         self.max_dist = np.linalg.norm(upper_bounds - lower_bounds)
-        self.radius = 0.03 * self.max_dist
+        self.radius = radius_scaler * self.max_dist
         self.reset()
         
         self.get_spaces()
