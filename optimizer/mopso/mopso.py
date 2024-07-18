@@ -54,7 +54,7 @@ class MOPSO(Optimizer):
                  initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology='random',
                  max_pareto_lenght=-1,
-                 rl_model = None, radius = None):
+                 rl_model = None, radius_scaler = 0.03):
 
         self.objective = objective
         self.num_particles = num_particles
@@ -160,7 +160,8 @@ class MOPSO(Optimizer):
         if self.rl_model is not None:
             self.use_rl = True
             self.max_dist = np.linalg.norm(np.array(self.upper_bounds) - np.array(self.lower_bounds))
-            self.radius = 0.021 * self.max_dist if radius == None else radius
+            self.radius = radius_scaler * self.max_dist
+            print(f"Radius {self.radius}")
             self.bad_points = []
             self.bad_points_per_iteration = []
             self.pareto_points_per_iteration = []

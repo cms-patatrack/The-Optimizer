@@ -27,7 +27,7 @@ class pso_environment_base:
         self._seed()
 
         # state stuff
-        self.ref_point = [5, 5]
+        self.ref_point = [600, 1]
         self.ind = HV(ref_point=self.ref_point)
         upper_bounds = np.array(self.possible_pso.upper_bounds)
         lower_bounds = np.array(self.possible_pso.lower_bounds)
@@ -44,7 +44,7 @@ class pso_environment_base:
         len_obs = 2
         low = np.array([0.] * len_obs)
         high = np.array([self.num_agents * self.pso_iterations] * 2)
-        obs_space = Box(low = low, high = high, shape = (2,), dtype=np.float32)
+        obs_space = Box(low = low, high = high, shape = (len_obs,), dtype=np.float32)
         act_space = Discrete(2)
 
         self.observation_space = [obs_space for i in range(self.num_agents)]
@@ -64,7 +64,8 @@ class pso_environment_base:
 
         # Evaluate all particles to begin with
         self.pso.step()
-        self.prev_hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
+        self.hv = round(self.ind(np.array([p.fitness for p in self.pso.pareto_front])), 2)
+        self.prev_hv = self.hv
         
         # Get observation
         obs_list = self.observe_list()
@@ -85,15 +86,27 @@ class pso_environment_base:
         p.set_fitness(optimization_output)
 
         # Give negative reward if evaluated
-        self.last_rewards[agent_id] = self.evaluation_penalty * action
+        agent_obs = self.last_obs[agent_id]
+        if agent_obs[0] != 0 or agent_obs[1] != 0:
+            self.last_rewards[agent_id] = self.evaluation_penalty * action
 
         if is_last:
             # Update pareto
             dominated, crowding_distances = self.pso.update_pareto_front()
 
             # Assign reward if not dominated
-            for id in range(self.num_agents):
-                self.last_rewards[id] += self.not_dominated_reward if not dominated[id] else 0
+            # for id in range(self.num_agents):
+            #     self.last_rewards[id] += self.not_dominated_reward if not dominated[id] else 0
+
+            # Assign reward if hv improves
+            hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
+            if hv > self.prev_hv:
+                self.prev_hv = hv
+                for id in range(self.num_agents):
+                    self.last_rewards[id] += self.metric_reward
+
+            # print(self.last_rewards)
+
 
             # If a particle is dominated and was evaluated add it to bad points list.      
             self.bad_points += find_new_bad_points(self.pso.particles, dominated, self.action_list)
@@ -108,11 +121,12 @@ class pso_environment_base:
                 particle.update_position(self.pso.lower_bounds, self.pso.upper_bounds)
 
             # If is last iteration assign Hyper volume reward to all agents
-            if self.pso.iteration == self.pso_iterations - 1:
-                hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
-                print("Hyper Volume: ", hv)
-                for id in range(self.num_agents):
-                    self.last_rewards[id] += self.metric_reward * hv
+            # if self.pso.iteration == self.pso_iterations - 1:
+            #     self.hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
+            #     print("Hyper Volume: ", self.hv)
+            #     for id in range(self.num_agents):
+            #         self.last_rewards[id] += self.metric_reward * self.hv
+            #     print(f"metricccc {self.metric_reward * self.hv}")
 
             # End of pso iteration
             self.pso.iteration += 1
@@ -122,6 +136,13 @@ class pso_environment_base:
             # Generate new observations
             obs_list = self.observe_list()
             self.last_obs = obs_list
+
+            # plt.figure()
+            # pareto_x = [particle.fitness[0] for particle in self.pso.pareto_front]
+            # pareto_y = [particle.fitness[1] for particle in self.pso.pareto_front]
+            # plt.scatter(pareto_x, pareto_y, s=5)
+            # plt.savefig("Pareto_try")
+            # input()
 
         return self.observe(agent_id)
 

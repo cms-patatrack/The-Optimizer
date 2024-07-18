@@ -53,12 +53,15 @@ class CustomCallback(BaseCallback):
 
         :return: If the callback returns False, training is aborted early.
         """
+        # hv = self.locals["model"].env.unwrapped.vec_envs[0].par_env.aec_env.env.hv
+        # self.hvs.append(hv)
         for i, k in enumerate(self.rewards.keys()):
                 self.rewards[k].append(self.locals["rewards"][i])
         if np.any(self.locals["dones"]):
             for k in self.cumulative_episode_reward.keys():
                 self.cumulative_episode_reward[k].append(np.sum(self.rewards[k]))
             self.rewards = {k : [] for k in self.keys}
+
         return True
 
     def _on_rollout_end(self) -> None:
@@ -85,3 +88,8 @@ class CustomCallback(BaseCallback):
         plt.legend(loc = 'lower right')
         plt.savefig(f"{self.name}_Cumulative_episodes_rewards.png")
         plt.close()
+
+        # plt.figure()
+        # plt.plot(self.hvs)
+        # plt.savefig(f"{self.name}_hvs.png")
+        # plt.close()

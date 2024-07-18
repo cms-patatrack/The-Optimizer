@@ -11,7 +11,7 @@ from tqdm import tqdm
 import torch as th
 from optimizer.masked_actor_critic import MaskedActorCriticPolicy
 
-def train(env_fn, steps: int = 1e4, seed: int = 0, name = 'Model', **env_kwargs):
+def train(env_fn, steps: int = 1e4, seed: int = 0, name = '', **env_kwargs):
     env = env_fn.parallel_env(**env_kwargs)
     env = ss.pettingzoo_env_to_vec_env_v1(env)
     env = ss.concat_vec_envs_v1(env, num_vec_envs = 1, num_cpus=1, base_class="stable_baselines3")

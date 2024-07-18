@@ -12,6 +12,7 @@ import torch as th
 from stable_baselines3.common.vec_env import VecMonitor
 import pdb
 from optimizer.trainer import train
+from optimizer.tester import test_model, print_results, plot_paretos, explainability
 
 num_agents = 50
 num_iterations = 200
@@ -42,7 +43,14 @@ objective = optimizer.ElementWiseObjective([zdt1_objective1, zdt1_objective2])
 
 def main():
 
-    for r in np.linspace(0.01, 0.1, 0.01):
+    radiuses = np.linspace(0.01, 0.1, 0.01)
+    num_rad = len(radiuses)
+    means_trained = np.empty(num_rad)
+    stds_trained = np.empty(num_rad)
+    means_random = np.empty(num_rad)
+    stds_random = np.empty(num_rad)
+
+    for r in radiuses:
         pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                             num_particles=num_agents,
                             inertia_weight=0.4, cognitive_coefficient=4, social_coefficient=2, initial_particles_position='random', exploring_particles=False,
@@ -54,11 +62,35 @@ def main():
                     'metric_reward' : 3,
                     'evaluation_penalty' : -1,
                     'not_dominated_reward' : 2,
-                    'radius_scaler' : 0.03,
+                    'radius_scaler' : r,
                     'render_mode' : 'None'
                         }
-        name = f"./models/tune_radius/zdt1_radius_{env_kwargs['radius_scaler']}"
+        name = f"./models/tune_radius/zdt1_radius_{r}"
         train(env_fn, steps=2000000, seed=0, name = name, **env_kwargs)
+
+        mopso_parameters = {'lower_bounds': lb,
+                    'upper_bounds'        : ub,
+                    'num_particles'       : num_agents,
+                    'topology'            : 'round_robin',
+                    'exploring_particles' : True,   
+                    'radius'              : r  
+                    }
+        
+        rl_model = f"{name}_model"
+        ref_point = [5, 5]
+        seeds = list(range(50, 150))
+        results = test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = False, time_limit = 3, verbose = 2)
+        
+        means_trained.append(results.get_metric_means('hyper_volume')['pso_trained_policy'])
+        means_random.append(results.get_metric_means('hyper_volume')['pso_random_policy'])
+        stds_trained.append(results.get_metric_stds('hyper_volume')['pso_trained_policy'])
+        stds_random.append(results.get_metric_stds('hyper_volume')['pso_random_policy'])
+
+    plt.figure()
+    plt.errorbar(radiuses, means_trained,stds_trained,label='Trained policy')
+    plt.errorbar(radiuses, means_random,stds_random,label='Random policy')
+    plt.legend()
+    plt.savefig("radius_tuning.png")
 
 if __name__ == "__main__":
     main()

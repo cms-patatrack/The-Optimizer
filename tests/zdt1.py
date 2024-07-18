@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
+from pymoo.indicators.hv import HV
 
 import warnings
 warnings.filterwarnings("error")
@@ -53,6 +54,10 @@ real_x = (np.linspace(0, 1, n_pareto_points))
 real_y = 1-np.sqrt(real_x)
 plt.scatter(real_x, real_y, s=5, c='red')
 plt.scatter(pareto_x, pareto_y, s=5)
+
+ind = HV(ref_point=[5,5])
+hv = ind(np.array([[real_x[i], real_y[i]] for i in range(len(real_x))]))
+print(hv)
 
 if not os.path.exists('tmp'):
     os.makedirs('tmp')
