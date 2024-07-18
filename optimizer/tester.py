@@ -10,23 +10,101 @@ import json
 from stable_baselines3 import PPO
 import plotly.graph_objs as go
 import plotly.io as pio
+from copy import deepcopy
+
+class results_container:
+    def __init__(self, res):
+        self.res = self.check_dict(res)
+        models = self.res[next(iter(res))]['models']
+        self.models_keys = models.keys()
+        self.metrics_keys = list(models[next(iter(models))].keys())
+        self.metrics_keys.remove('pareto_front')
+        self.num_metrics = len(self.metrics_keys)
+        self.num_models = len(self.models_keys)
+        self.num_seeds = len(self.res.keys())
+
+        self.means = None
+        self.stds = None
+
+        self.metric_to_index_map = {}
+        for i, met in enumerate(self.metrics_keys):
+            self.metric_to_index_map[met] = i
+
+    def check_dict(self, res):
+        if type(res) is not dict:
+            if type(res) is not str:
+                 raise ValueError(f"Results must be a dictionary or a string")
+            print(f"Loading file {res}")
+            f = open(res) 
+            res = json.load(f)
+        return res
+
+    def print_results(self):
+        for i, mod in enumerate(self.models_keys):
+            print(f"Model {mod}:")
+            for j, met in enumerate(self.metrics_keys):
+                print(f"\t{met}: {self.get_metric_means(met)[mod]} +- {self.get_metric_stds(met)[mod] / np.sqrt(self.num_seeds)}")
+
+    def calculate_metrics_momenta(self):
+        metrics = np.zeros((self.num_seeds, self.num_models, self.num_metrics))
+        for s, seed in enumerate(self.res.keys()):
+            for i, mod in enumerate(self.models_keys):
+                for j, met in enumerate(self.metrics_keys):
+                    metrics[s][i][j] = self.res[seed]['models'][mod][met]
+
+        # means has models on rows and metrics on cols
+        self.means = np.mean(metrics, axis = 0)
+        self.stds = np.std(metrics, axis = 0)
+        return self.means, self.stds
+
+    def get_metric_momentum(self, metric, matrix):
+        metric_id = self.metric_to_index_map[metric]
+        metric_means = {}
+        for i, mod in enumerate(self.models_keys):
+            metric_means[mod] = matrix[i][metric_id]
+        return metric_means
+    
+    def get_metric_means(self, metric):
+        if self.means is None:
+            self.calculate_metrics_momenta()
+        return self.get_metric_momentum(metric, self.means)
+    
+    def get_metric_stds(self, metric):
+        if self.stds is None:
+            self.calculate_metrics_momenta()
+        return self.get_metric_momentum(metric, self.stds)
+
+    def plot_paretos(self, known_pareto = None):
+        for r in self.res.keys():
+            result = self.res[r]
+            paretos = {}
+            for mod in result['models'].keys():
+                model = result['models'][mod]
+                pareto = model['pareto_front']
+                axs = []
+                num_objectives = len(pareto[0])
+                for obj in range(num_objectives):
+                    axs.append([fitness[obj] for fitness in pareto])
+                paretos[mod] = axs
+            if num_objectives == 2: plot_pareto_2d(paretos, result['seed'], known_pareto)
+            elif num_objectives == 3: plot_pareto_3d(paretos, result['seed'], known_pareto)
+            else: print(f"No implementation of plot fuction for {num_objectives} objectives")
 
 def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = False, print_results_enabled = True, known_pareto=None, time_limit = np.inf, verbose = 0):
-    results = {}
+    results = dict()
     for seed in tqdm(seeds, desc="Testing seed", unit="iter"):
-        result = test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit, verbose = verbose)
-        results[f'{seed}'] = result
-
-    if print_results_enabled: print_results(results)
-    if plot_paretos_enabled: plot_paretos(results, known_pareto)
+        res = test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit, verbose = verbose)
+        results[f"{seed}"] = res
 
     out_file = open(f"{name}.json", "w")
-
     json.dump(results, out_file, indent = 6)
-
     out_file.close()
 
-    return results
+    results_obj = results_container(results)
+    if print_results_enabled: results_obj.print_results()
+    if plot_paretos_enabled: results_obj.plot_paretos(known_pareto)
+
+    return results_obj
 
 def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit = np.inf, verbose = 0):
 
@@ -41,7 +119,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
                           inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
                           initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model=None, radius=mopso_parameters['radius'])
+                          rl_model=None, radius_scaler=mopso_parameters['radius_scaler'])
 
     start_time_pso = time.time()                    
     pso.optimize(num_iterations=num_iterations, time_limit=time_limit)
@@ -54,7 +132,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
                           inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
                           initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model = rl_model, radius=mopso_parameters['radius'])
+                          rl_model = rl_model, radius_scaler=mopso_parameters['radius_scaler'])
 
     start_time_pso_trained_policy = time.time() 
     pso_trained_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
@@ -67,7 +145,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
                           inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
                           initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model='random', radius=mopso_parameters['radius'])
+                          rl_model='random', radius_scaler=mopso_parameters['radius_scaler'])
 
     start_time_pso_random_policy = time.time() 
     pso_random_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
@@ -80,7 +158,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                           lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
                           inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
                           initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model='explainable', radius=mopso_parameters['radius'])
+                          rl_model='explainable', radius_scaler=mopso_parameters['radius_scaler'])
 
     start_time_pso_explainable_policy = time.time() 
     pso_explainable_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
@@ -109,7 +187,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
     time_random_policy = end_time_pso_random_policy - start_time_pso_random_policy
     time_explainable_policy = end_time_pso_explainable_policy - start_time_pso_explainable_policy
 
-    result = {'seed'   : seed,
+    res =    {'seed'   : seed,
               'models' : {'pso':                {'evaluations'  : evaluations_pso,
                                                  'pareto_front' : pareto_pso,
                                                  'hyper_volume' : hv_pso,
@@ -136,50 +214,7 @@ def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, 
                         }
               }
     
-    return result
-
-def print_results(results):
-    results = check_dict(results)
-    models = results[next(iter(results))]['models']
-    models_keys = models.keys()
-    metrics_keys = list(models[next(iter(models))].keys())
-    metrics_keys.remove('pareto_front')
-
-    num_metrics = len(metrics_keys)
-    num_models = len(models_keys)
-    num_seeds = len(results.keys())
-
-    metrics = np.zeros((num_seeds, num_models, num_metrics))
-
-    for s, seed in enumerate(results.keys()):
-        for i, mod in enumerate(models_keys):
-            for j, met in enumerate(metrics_keys):
-                metrics[s][i][j] = results[seed]['models'][mod][met]
-
-    means = np.mean(metrics, axis = 0)
-    stds = np.std(metrics, axis = 0)
-
-    for i, mod in enumerate(models_keys):
-        print(f"Model {mod}:")
-        for j, met in enumerate(metrics_keys):
-            print(f"\t{met}: {means[i][j]} +- {stds[i][j] / np.sqrt(num_seeds)}")
-
-def plot_paretos(results, known_pareto = None):
-    results = check_dict(results)
-    for r in results.keys():
-        result = results[r]
-        paretos = {}
-        for mod in result['models'].keys():
-            model = result['models'][mod]
-            pareto = model['pareto_front']
-            axs = []
-            num_objectives = len(pareto[0])
-            for obj in range(num_objectives):
-                axs.append([fitness[obj] for fitness in pareto])
-            paretos[mod] = axs
-        if num_objectives == 2: plot_pareto_2d(paretos, result['seed'], known_pareto)
-        elif num_objectives == 3: plot_pareto_3d(paretos, result['seed'], known_pareto)
-        else: print(f"No implementation of plot fuction for {num_objectives} objectives")
+    return res
 
 def plot_pareto_2d(paretos, seed, known_pareto = None):
     markers = list(MarkerStyle('').markers.keys())
@@ -246,13 +281,6 @@ def plot_pareto_3d(paretos, seed, known_pareto = None):
                     )
 
     pio.write_html(fig, file=f"./tests/paretos/Pareto_front_seed_{seed}.html", auto_open=True)
-
-def check_dict(results):
-    if type(results) is not dict:
-        print(f"Loading file {results}")
-        f = open(results) 
-        results = json.load(f)
-    return results
 
 def explainability(rl_model, num_points):
     model = PPO.load(rl_model)
