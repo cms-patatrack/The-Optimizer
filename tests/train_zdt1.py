@@ -50,7 +50,7 @@ def main():
     env_fn = pso_environment_AEC
     env_kwargs = {'pso' : pso,
                 'pso_iterations' : num_iterations,
-                'metric_reward' : 25 , #num_iterations / 24.66408110242748 / 3,
+                'metric_reward' : num_iterations / 24.66408110242748 / 3,
                 'evaluation_penalty' : -1,
                 'not_dominated_reward' : 2,
                 'render_mode' : 'None'

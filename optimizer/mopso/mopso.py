@@ -54,7 +54,7 @@ class MOPSO(Optimizer):
                  initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology='random',
                  max_pareto_lenght=-1,
-                 rl_model = None, radius_scaler = 0.03):
+                 rl_model = None, radius_scaler = 0.021):
 
         self.objective = objective
         self.num_particles = num_particles

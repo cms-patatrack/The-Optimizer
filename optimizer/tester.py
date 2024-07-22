@@ -12,6 +12,8 @@ import plotly.graph_objs as go
 import plotly.io as pio
 from copy import deepcopy
 
+VALID_MODELS = ['pso', 'pso_trained_policy', 'pso_random_policy', 'pso_explainable_policy']
+
 class results_container:
     def __init__(self, res):
         self.res = self.check_dict(res)
@@ -90,10 +92,10 @@ class results_container:
             elif num_objectives == 3: plot_pareto_3d(paretos, result['seed'], known_pareto)
             else: print(f"No implementation of plot fuction for {num_objectives} objectives")
 
-def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = False, print_results_enabled = True, known_pareto=None, time_limit = np.inf, verbose = 0):
+def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = False, print_results_enabled = True, known_pareto=None, time_limit = np.inf, models_to_test = VALID_MODELS, verbose = 0):
     results = dict()
     for seed in tqdm(seeds, desc="Testing seed", unit="iter"):
-        res = test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit, verbose = verbose)
+        res = test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit, models_to_test = models_to_test, verbose = verbose)
         results[f"{seed}"] = res
 
     out_file = open(f"{name}.json", "w")
@@ -106,113 +108,166 @@ def test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point,
 
     return results_obj
 
-def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit = np.inf, verbose = 0):
+def test_seed(objective, mopso_parameters, num_iterations, rl_model, ref_point, seed, time_limit = np.inf, models_to_test = VALID_MODELS, verbose = 0):
 
+    print(f"Testing models: {models_to_test}")
+    res =    {'seed'   : seed,
+              'models' : {}
+             }
+    ind = HV(ref_point=ref_point)
+    
     if verbose > 0 : print(f"SEED {seed}")
 
     #Optimizers
     optimizers = []
 
-    if verbose > 1 : print("Starting MOPSO withot RL")
-    optimizer.Randomizer.rng = np.random.default_rng(seed)
-    pso = optimizer.MOPSO(objective=objective, 
-                          lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
-                          inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
-                          initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model=None, radius_scaler=mopso_parameters['radius_scaler'])
+    if VALID_MODELS[0] in models_to_test:
+        if verbose > 1 : print("Starting MOPSO withot RL")
+        optimizer.Randomizer.rng = np.random.default_rng(seed)
+        pso = optimizer.MOPSO(objective=objective, 
+                            lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
+                            inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
+                            initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
+                            rl_model=None, radius_scaler=mopso_parameters['radius_scaler'])
 
-    start_time_pso = time.time()                    
-    pso.optimize(num_iterations=num_iterations, time_limit=time_limit)
-    end_time_pso = time.time()
-    optimizers.append(pso)
+        start_time_pso = time.time()                    
+        pso.optimize(num_iterations=num_iterations, time_limit=time_limit)
+        end_time_pso = time.time()
+        optimizers.append(pso)
 
-    if verbose > 1 : print("Starting MOPSO with trained policy")
-    optimizer.Randomizer.rng = np.random.default_rng(seed)
-    pso_trained_policy = optimizer.MOPSO(objective=objective, 
-                          lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
-                          inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
-                          initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model = rl_model, radius_scaler=mopso_parameters['radius_scaler'])
+        evaluations_pso = int(sum(pso.evaluations))
+        pareto_pso = [p.fitness.tolist() for p in pso.pareto_front]
+        hv_pso = ind(np.array(pareto_pso))
+        time_pso = end_time_pso - start_time_pso
 
-    start_time_pso_trained_policy = time.time() 
-    pso_trained_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
-    end_time_pso_trained_policy = time.time() 
-    optimizers.append(pso_trained_policy)
+        res['models']['pso'] = {'evaluations'  : evaluations_pso,
+                                'pareto_front' : pareto_pso,
+                                'hyper_volume' : hv_pso,
+                                'time'         : time_pso,
+                            }
+        
+    if VALID_MODELS[1] in models_to_test:
+        if verbose > 1 : print("Starting MOPSO with trained policy")
+        optimizer.Randomizer.rng = np.random.default_rng(seed)
+        pso_trained_policy = optimizer.MOPSO(objective=objective, 
+                            lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
+                            inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
+                            initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
+                            rl_model = rl_model, radius_scaler=mopso_parameters['radius_scaler'])
 
-    if verbose > 1 : print("Starting MOPSO with random policy")
-    optimizer.Randomizer.rng = np.random.default_rng(seed)
-    pso_random_policy = optimizer.MOPSO(objective=objective, 
-                          lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
-                          inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
-                          initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model='random', radius_scaler=mopso_parameters['radius_scaler'])
+        start_time_pso_trained_policy = time.time() 
+        pso_trained_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
+        end_time_pso_trained_policy = time.time() 
+        optimizers.append(pso_trained_policy)
 
-    start_time_pso_random_policy = time.time() 
-    pso_random_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
-    end_time_pso_random_policy = time.time()
-    optimizers.append(pso_random_policy)
+        evaluations_pso_trained_policy = int(sum(pso_trained_policy.evaluations))
+        pareto_pso_trained_policy = [p.fitness.tolist() for p in pso_trained_policy.pareto_front]
+        hv_pso_trained_policy= ind(np.array(pareto_pso_trained_policy))
+        time_pso_trained_policy = end_time_pso_trained_policy - start_time_pso_trained_policy
 
-    if verbose > 1 : print("Starting MOPSO with explainable policy")
-    optimizer.Randomizer.rng = np.random.default_rng(seed)
-    pso_explainable_policy = optimizer.MOPSO(objective=objective, 
-                          lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
-                          inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
-                          initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
-                          rl_model='explainable', radius_scaler=mopso_parameters['radius_scaler'])
+        res['models']['pso_trained_policy'] = {'evaluations'  : evaluations_pso_trained_policy,
+                                            'pareto_front' : pareto_pso_trained_policy,
+                                            'hyper_volume' : hv_pso_trained_policy,
+                                            'time'         : time_pso_trained_policy
+                                            }
+        
+    if VALID_MODELS[2] in models_to_test:
+        if verbose > 1 : print("Starting MOPSO with random policy")
+        optimizer.Randomizer.rng = np.random.default_rng(seed)
+        pso_random_policy = optimizer.MOPSO(objective=objective, 
+                            lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
+                            inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
+                            initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
+                            rl_model='random', radius_scaler=mopso_parameters['radius_scaler'])
 
-    start_time_pso_explainable_policy = time.time() 
-    pso_explainable_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
-    end_time_pso_explainable_policy = time.time()
-    optimizers.append(pso_explainable_policy)
+        start_time_pso_random_policy = time.time() 
+        pso_random_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
+        end_time_pso_random_policy = time.time()
+        optimizers.append(pso_random_policy)
+
+        evaluations_pso_random_policy = int(sum(pso_random_policy.evaluations))
+        pareto_pso_random_policy = [p.fitness.tolist() for p in pso_random_policy.pareto_front]
+        hv_pso_random_policy= ind(np.array(pareto_pso_random_policy))
+        time_random_policy = end_time_pso_random_policy - start_time_pso_random_policy
+
+        res['models']['pso_random_policy'] = {'evaluations'  : evaluations_pso_random_policy,
+                                            'pareto_front' : pareto_pso_random_policy,
+                                            'hyper_volume' : hv_pso_random_policy,
+                                            'time'         : time_random_policy
+                                            }
+    if VALID_MODELS[3] in models_to_test:
+        if verbose > 1 : print("Starting MOPSO with explainable policy")
+        optimizer.Randomizer.rng = np.random.default_rng(seed)
+        pso_explainable_policy = optimizer.MOPSO(objective=objective, 
+                            lower_bounds=mopso_parameters['lower_bounds'], upper_bounds=mopso_parameters['upper_bounds'], num_particles=mopso_parameters['num_particles'],
+                            inertia_weight=0.6, cognitive_coefficient=1, social_coefficient=2, topology = mopso_parameters['topology'],
+                            initial_particles_position='random', exploring_particles = mopso_parameters['exploring_particles'],
+                            rl_model='explainable', radius_scaler=mopso_parameters['radius_scaler'])
+
+        start_time_pso_explainable_policy = time.time() 
+        pso_explainable_policy.optimize(num_iterations=num_iterations, time_limit=time_limit)
+        end_time_pso_explainable_policy = time.time()
+        optimizers.append(pso_explainable_policy)
+
+        evaluations_pso_explainable_policy = int(sum(pso_explainable_policy.evaluations))
+        pareto_pso_explainable_policy = [p.fitness.tolist() for p in pso_explainable_policy.pareto_front]
+        hv_pso_explainable_policy= ind(np.array(pareto_pso_explainable_policy))
+        time_explainable_policy = end_time_pso_explainable_policy - start_time_pso_explainable_policy
+
+        res['models']['pso_explainable_policy'] = {'evaluations'  : evaluations_pso_explainable_policy,
+                                                'pareto_front' : pareto_pso_explainable_policy,
+                                                'hyper_volume' : hv_pso_explainable_policy,
+                                                'time'         : time_explainable_policy
+                                                }
 
     # Results
-    evaluations_pso = int(sum(pso.evaluations))
-    evaluations_pso_trained_policy = int(sum(pso_trained_policy.evaluations))
-    evaluations_pso_random_policy = int(sum(pso_random_policy.evaluations))
-    evaluations_pso_explainable_policy = int(sum(pso_explainable_policy.evaluations))
+    # evaluations_pso = int(sum(pso.evaluations))
+    # evaluations_pso_trained_policy = int(sum(pso_trained_policy.evaluations))
+    # evaluations_pso_random_policy = int(sum(pso_random_policy.evaluations))
+    # evaluations_pso_explainable_policy = int(sum(pso_explainable_policy.evaluations))
 
-    pareto_pso = [p.fitness.tolist() for p in pso.pareto_front]
-    pareto_pso_trained_policy = [p.fitness.tolist() for p in pso_trained_policy.pareto_front]
-    pareto_pso_random_policy = [p.fitness.tolist() for p in pso_random_policy.pareto_front]
-    pareto_pso_explainable_policy = [p.fitness.tolist() for p in pso_explainable_policy.pareto_front]
+    # pareto_pso = [p.fitness.tolist() for p in pso.pareto_front]
+    # pareto_pso_trained_policy = [p.fitness.tolist() for p in pso_trained_policy.pareto_front]
+    # pareto_pso_random_policy = [p.fitness.tolist() for p in pso_random_policy.pareto_front]
+    # pareto_pso_explainable_policy = [p.fitness.tolist() for p in pso_explainable_policy.pareto_front]
 
-    ind = HV(ref_point=ref_point)
-    hv_pso = ind(np.array(pareto_pso))
-    hv_pso_trained_policy= ind(np.array(pareto_pso_trained_policy))
-    hv_pso_random_policy= ind(np.array(pareto_pso_random_policy))
-    hv_pso_explainable_policy= ind(np.array(pareto_pso_explainable_policy))
+    # ind = HV(ref_point=ref_point)
+    # hv_pso = ind(np.array(pareto_pso))
+    # hv_pso_trained_policy= ind(np.array(pareto_pso_trained_policy))
+    # hv_pso_random_policy= ind(np.array(pareto_pso_random_policy))
+    # hv_pso_explainable_policy= ind(np.array(pareto_pso_explainable_policy))
 
-    time_pso = end_time_pso - start_time_pso
-    time_pso_trained_policy = end_time_pso_trained_policy - start_time_pso_trained_policy
-    time_random_policy = end_time_pso_random_policy - start_time_pso_random_policy
-    time_explainable_policy = end_time_pso_explainable_policy - start_time_pso_explainable_policy
+    # time_pso = end_time_pso - start_time_pso
+    # time_pso_trained_policy = end_time_pso_trained_policy - start_time_pso_trained_policy
+    # time_random_policy = end_time_pso_random_policy - start_time_pso_random_policy
+    # time_explainable_policy = end_time_pso_explainable_policy - start_time_pso_explainable_policy
 
-    res =    {'seed'   : seed,
-              'models' : {'pso':                {'evaluations'  : evaluations_pso,
-                                                 'pareto_front' : pareto_pso,
-                                                 'hyper_volume' : hv_pso,
-                                                 'time'         : time_pso,
-                                                },
+    # res =    {'seed'   : seed,
+    #           'models' : {'pso':                    {'evaluations'  : evaluations_pso,
+    #                                                  'pareto_front' : pareto_pso,
+    #                                                  'hyper_volume' : hv_pso,
+    #                                                  'time'         : time_pso,
+    #                                                 },
 
-                          'pso_trained_policy': {'evaluations'  : evaluations_pso_trained_policy,
-                                                 'pareto_front' : pareto_pso_trained_policy,
-                                                 'hyper_volume' : hv_pso_trained_policy,
-                                                 'time'         : time_pso_trained_policy
-                                                },
+    #                       'pso_trained_policy':     {'evaluations'  : evaluations_pso_trained_policy,
+    #                                                  'pareto_front' : pareto_pso_trained_policy,
+    #                                                  'hyper_volume' : hv_pso_trained_policy,
+    #                                                  'time'         : time_pso_trained_policy
+    #                                                 },
 
-                          'pso_random_policy':  {'evaluations'  : evaluations_pso_random_policy,
-                                                 'pareto_front' : pareto_pso_random_policy,
-                                                 'hyper_volume' : hv_pso_random_policy,
-                                                 'time'         : time_random_policy
-                                                },
+    #                       'pso_random_policy':      {'evaluations'  : evaluations_pso_random_policy,
+    #                                                  'pareto_front' : pareto_pso_random_policy,
+    #                                                  'hyper_volume' : hv_pso_random_policy,
+    #                                                  'time'         : time_random_policy
+    #                                                 },
 
-                          'pso_explainable_policy':  {'evaluations'  : evaluations_pso_explainable_policy,
-                                                 'pareto_front' : pareto_pso_explainable_policy,
-                                                 'hyper_volume' : hv_pso_explainable_policy,
-                                                 'time'         : time_explainable_policy
-                                                }
-                        }
-              }
+    #                       'pso_explainable_policy': {'evaluations'  : evaluations_pso_explainable_policy,
+    #                                                 'pareto_front' : pareto_pso_explainable_policy,
+    #                                                 'hyper_volume' : hv_pso_explainable_policy,
+    #                                                 'time'         : time_explainable_policy
+    #                                                 }
+    #                     }
+    #           }
     
     return res
 
@@ -304,4 +359,4 @@ def explainability(rl_model, num_points):
     plt.ylim(top=num_points)
     name = rl_model.replace("./models/", '')
     name = name.replace("/model", '')
-    plt.savefig(f"explainability_{name}.png")
+    plt.savefig(f"explainability.png")

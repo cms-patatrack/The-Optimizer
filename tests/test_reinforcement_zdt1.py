@@ -41,10 +41,10 @@ rl_model = './models/model_periodic/model'
 # rl_model = './models/model_zdt1/model'
 # rl_model = './models/model_periodic_parallel/model'
 # rl_model = './models/model_new_reward_hv_diff/model' #attached 2
-rl_model = './models/model_zdt4_100/model'
+rl_model = './models/tune_radius/zdt1_radius_0.01_model'
 ref_point = [5, 5]
 seeds = list(range(50, 52))
 print(seeds)
 name = f"results_zdt1_agents_{num_agents}_iterations_{num_iterations}"
-test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = True, time_limit = 4.5, verbose = 2)
+# test_model(objective, mopso_parameters, num_iterations, rl_model, ref_point, seeds, name, plot_paretos_enabled = True, time_limit = 4.5, verbose = 2)
 explainability(rl_model, 100)
