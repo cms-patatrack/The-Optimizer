@@ -11,6 +11,8 @@ from stable_baselines3 import PPO
 import plotly.graph_objs as go
 import plotly.io as pio
 from copy import deepcopy
+import os
+import matplotlib.patches as mpatches
 
 VALID_MODELS = ['pso', 'pso_trained_policy', 'pso_random_policy', 'pso_explainable_policy']
 
@@ -344,19 +346,25 @@ def explainability(rl_model, num_points):
         for y in range(num_points):
             res[y,x] = model.predict([x, y], deterministic=True)[0].tolist()
 
+    res[0][0] = 1.
+
     cmap = mcolors.ListedColormap(['red', 'limegreen'])
-    plt.imshow(res, cmap=cmap, origin='lower')
-    ax = plt.gca();
-    ax.set_xticks(np.arange(0, num_points, 5));
-    ax.set_yticks(np.arange(0, num_points, 5));
+    plt.imshow(res, cmap=cmap, vmin=0, vmax=1, origin='lower')
+    ax = plt.gca()
+    ax.set_xticks(np.arange(0, num_points - 1, 5))
+    ax.set_yticks(np.arange(0, num_points - 1, 5))
+
     plt.xlabel("Bad points")
     plt.ylabel("Pareto points")
 
-    x = np.linspace(0, num_points)
-    y = 5 * x
-    plt.plot(x, y, label=f'y = {5}x', color = 'black')
-    plt.legend()
-    plt.ylim(top=num_points)
-    name = rl_model.replace("./models/", '')
-    name = name.replace("/model", '')
-    plt.savefig(f"explainability.png")
+    # x = np.linspace(0, num_points)
+    # y = 5 * x
+    # plt.plot(x, y, label=f'y = {5}x', color = 'black')
+    # plt.legend()
+    rect1 = mpatches.Patch(color=cmap.colors[0], label='Not evaluated')
+    rect2 = mpatches.Patch(color=cmap.colors[1], label='Evaluated')
+    plt.legend(handles=[rect1, rect2])
+
+    head_tail = os.path.split(rl_model)
+    plt.savefig(f"{head_tail[0]}/explainability_{head_tail[1]}.png")
+    plt.close()
