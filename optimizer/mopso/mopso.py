@@ -90,7 +90,7 @@ class MOPSO(Optimizer):
         self.exploring_particles = exploring_particles
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
-
+        
         VALID_TOPOLOGIES = {
             'random', 'lower_weighted_crowding_distance', 'round_robin'}
 
