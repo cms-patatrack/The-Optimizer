@@ -13,7 +13,7 @@ from stable_baselines3.common.vec_env import VecMonitor
 import pdb
 from optimizer.trainer import train
 
-num_agents = 50
+num_agents = 20
 num_iterations = 200
 num_params = 2
 
@@ -45,15 +45,16 @@ def main():
                         exploring_particles = True, rl_model=None, topology = 'round_robin')
 
     env_fn = pso_environment_AEC
+    scaler = 60
     env_kwargs = {'pso' : pso,
                 'pso_iterations' : num_iterations,
-                'metric_reward' : 25,
+                'metric_reward' : 1 / 54.06236516259962 * scaler,
                 'evaluation_penalty' : -1,
                 'not_dominated_reward' : 2,
                 'render_mode' : 'None'
                     }
 
-    name = f"model_reward_hv_diff_25"
+    name = f"model_normalized_hv_{scaler}"
     train(env_fn, steps=1000000, seed=0, name=name, **env_kwargs)
 
 if __name__ == "__main__":

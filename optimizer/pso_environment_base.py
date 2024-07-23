@@ -87,16 +87,16 @@ class pso_environment_base:
 
         # Give negative reward if evaluated
         agent_obs = self.last_obs[agent_id]
-        if agent_obs[0] != 0 or agent_obs[1] != 0:
-            self.last_rewards[agent_id] = self.evaluation_penalty * action
+        # if agent_obs[0] != 0 or agent_obs[1] != 0:
+        #     self.last_rewards[agent_id] = self.evaluation_penalty * action
 
         if is_last:
             # Update pareto
             dominated, crowding_distances = self.pso.update_pareto_front()
 
             # Assign reward if not dominated
-            for id in range(self.num_agents):
-                self.last_rewards[id] += self.not_dominated_reward if not dominated[id] else 0
+            # for id in range(self.num_agents):
+            #     self.last_rewards[id] += self.not_dominated_reward if not dominated[id] else 0
 
             # Assign reward if hv improves
             # hv = round(self.ind(np.array([p.fitness for p in self.pso.pareto_front])), 2)
