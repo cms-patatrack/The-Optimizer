@@ -13,7 +13,7 @@ from stable_baselines3.common.vec_env import VecMonitor
 import pdb
 from optimizer.trainer import train
 
-num_agents = 50
+num_agents = 2
 num_iterations = 200
 num_params = 30
 
@@ -48,9 +48,10 @@ def main():
                         rl_model=None)
 
     env_fn = pso_environment_AEC
+    scaler = 150
     env_kwargs = {'pso' : pso,
                 'pso_iterations' : num_iterations,
-                'metric_reward' : num_iterations / 24.66408110242748 / 3,
+                'metric_reward' : 1 / 24.66408110242748 * scaler,
                 'evaluation_penalty' : -1,
                 'not_dominated_reward' : 2,
                 'render_mode' : 'None'

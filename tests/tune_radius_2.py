@@ -41,7 +41,7 @@ optimizer.FileManager.saving_enabled = False
 
 objective = optimizer.ElementWiseObjective([objective1, objective2])
 objective_zdt1 = optimizer.ElementWiseObjective(zdt1.zdt1_objective, 2)
-directory = f"./models/tune_radius_60_0_1/"
+directory = f"./models/tune_radius_60_0_0/"
 
 def evaluate_radius(radius):
     models_to_test = ['pso', 'pso_trained_policy', 'pso_random_policy']
@@ -63,7 +63,7 @@ def evaluate_radius(radius):
                     'metric_reward' :  1 / 54.06236516259962 * 60,
                     'metric_reward_hv_diff' : 0, #1 / 54.06236516259962 * scaler,
                     'evaluation_penalty' : -1,
-                    'not_dominated_reward' : 2,
+                    'not_dominated_reward' : 0,
                     'radius_scaler' : radius,
                     'render_mode' : 'None'
                         }
@@ -131,7 +131,7 @@ def main():
     axs[1].set_ylabel('Mean number of evaluations')
     axs[1].legend()
 
-    plt.savefig(f"radius_tuning_60_0_1_periodic.png")
+    plt.savefig(f"radius_tuning_60_0_0_periodic.png")
 
     np.save(f"{directory}_hv_means_trained.npy", hv_means_trained)
     np.save(f"{directory}_hv_stds_trained.npy", hv_stds_trained)

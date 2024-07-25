@@ -14,7 +14,7 @@ import pdb
 from optimizer.trainer import train
 
 num_agents = 20
-num_iterations = 200
+num_iterations = 100
 num_params = 2
 
 lb = [-10.] * num_params
@@ -45,17 +45,18 @@ def main():
                         exploring_particles = True, rl_model=None, topology = 'round_robin')
 
     env_fn = pso_environment_AEC
-    scaler = 60
+    scaler = 100
     env_kwargs = {'pso' : pso,
                 'pso_iterations' : num_iterations,
-                'metric_reward' : 1 / 54.06236516259962 * scaler,
+                'metric_reward' : scaler, #1 / 54.06236516259962 * scaler,
+                'metric_reward_hv_diff' : 0, #1 / 54.06236516259962 * scaler,
                 'evaluation_penalty' : -1,
-                'not_dominated_reward' : 2,
+                'not_dominated_reward' : 0.5,
                 'render_mode' : 'None'
                     }
 
-    name = f"model_normalized_hv_{scaler}"
-    train(env_fn, steps=1000000, seed=0, name=name, **env_kwargs)
+    name = f"model_exp_hv_{scaler}_0_0.5"
+    train(env_fn, steps=3000000, seed=0, name=name, **env_kwargs)
 
 if __name__ == "__main__":
     main()

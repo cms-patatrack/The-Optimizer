@@ -20,7 +20,7 @@ class results_container:
     def __init__(self, res):
         self.res = self.check_dict(res)
         models = self.res[next(iter(res))]['models']
-        self.models_keys = models.keys()
+        self.models_keys = list(models.keys())
         self.metrics_keys = list(models[next(iter(models))].keys())
         self.metrics_keys.remove('pareto_front')
         self.num_metrics = len(self.metrics_keys)
@@ -344,7 +344,7 @@ def explainability(rl_model, num_points):
     res = np.empty((num_points,num_points))
     for x in range(num_points):
         for y in range(num_points):
-            res[y,x] = model.predict([x, y], deterministic=True)[0].tolist()
+            res[y,x] = model.predict([x, y, 0], deterministic=True)[0].tolist()
 
     res[0][0] = 1.
 
