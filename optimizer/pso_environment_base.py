@@ -10,12 +10,13 @@ import optimizer
 
 
 class pso_environment_base:
-    def __init__(self, pso, pso_iterations, metric_reward, evaluation_penalty, not_dominated_reward, render_mode = None):
+    def __init__(self, pso, pso_iterations, metric_reward, metric_reward_hv_diff, evaluation_penalty, not_dominated_reward, radius_scaler = 0.03, render_mode = None):
         
         self.possible_pso = pso
         self.pso_iterations = pso_iterations
         self.num_agents = self.possible_pso.num_particles
         self.metric_reward = metric_reward
+        self.metric_reward_hv_diff = metric_reward_hv_diff
         self.evaluation_penalty = evaluation_penalty
         self.not_dominated_reward = not_dominated_reward
 
@@ -33,7 +34,7 @@ class pso_environment_base:
         lower_bounds = np.array(self.possible_pso.lower_bounds)
         self.num_parameters = len(lower_bounds)
         self.max_dist = np.linalg.norm(upper_bounds - lower_bounds)
-        self.radius = 0.03 * self.max_dist
+        self.radius = radius_scaler * self.max_dist
         self.reset()
         
         self.get_spaces()
@@ -41,10 +42,10 @@ class pso_environment_base:
 
     def get_spaces(self):
         # Define the action and observation spaces for all of the agents
-        len_obs = 5
+        len_obs = 3
         low = np.array([0.] * len_obs)
-        high = np.array([self.num_agents * self.pso_iterations] * 2 + [self.pso_iterations, self.max_dist, 1])
-        obs_space = Box(low = low, high = high, shape = (5,), dtype=np.float32)
+        high = np.array([self.num_agents * self.pso_iterations] * 2 + [1])
+        obs_space = Box(low = low, high = high, shape = (len_obs,), dtype=np.float32)
         act_space = Discrete(2)
 
         self.observation_space = [obs_space for i in range(self.num_agents)]
@@ -64,7 +65,8 @@ class pso_environment_base:
 
         # Evaluate all particles to begin with
         self.pso.step()
-        self.prev_hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
+        self.hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
+        self.prev_hv = self.hv
         
         # Get observation
         obs_list = self.observe_list()
@@ -80,11 +82,12 @@ class pso_environment_base:
         p = self.pso.particles[agent_id]
         
         # Execute actions
-        # p.num_skips = 0 if action else p.num_skips + 1
         optimization_output = self.pso.objective.evaluate(np.array([p.position]))[0] if action else [np.inf] * len(p.fitness)
         p.set_fitness(optimization_output)
 
         # Give negative reward if evaluated
+        agent_obs = self.last_obs[agent_id]
+        # if agent_obs[0] != 0 or agent_obs[1] != 0:
         self.last_rewards[agent_id] = self.evaluation_penalty * action
 
         if is_last:
@@ -94,6 +97,15 @@ class pso_environment_base:
             # Assign reward if not dominated
             for id in range(self.num_agents):
                 self.last_rewards[id] += self.not_dominated_reward if not dominated[id] else 0
+                # if sum(self.action_list) < 0.1 * self.num_agents:
+                #     self.last_rewards[id] += -1000
+
+            # Assign reward if hv improves
+            self.hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
+            for id in range(self.num_agents):
+                # self.last_rewards[id] += self.metric_reward_hv_diff * (self.hv - self.prev_hv)
+                self.last_rewards[id] += self.metric_reward_hv_diff * np.exp(500 * (self.hv / 54.06236516259962 -1 )) - self.metric_reward_hv_diff * np.exp(500 * (self.prev_hv / 54.06236516259962 -1 ))
+            self.prev_hv = self.hv
 
             # If a particle is dominated and was evaluated add it to bad points list.      
             self.bad_points += find_new_bad_points(self.pso.particles, dominated, self.action_list)
@@ -109,10 +121,9 @@ class pso_environment_base:
 
             # If is last iteration assign Hyper volume reward to all agents
             if self.pso.iteration == self.pso_iterations - 1:
-                hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
-                print("Hyper Volume: ", hv)
+                self.hv = self.ind(np.array([p.fitness for p in self.pso.pareto_front]))
                 for id in range(self.num_agents):
-                    self.last_rewards[id] += self.metric_reward * hv
+                    self.last_rewards[id] += self.metric_reward * np.exp(500 * (self.hv / 54.06236516259962 -1))
 
             # End of pso iteration
             self.pso.iteration += 1
@@ -122,6 +133,13 @@ class pso_environment_base:
             # Generate new observations
             obs_list = self.observe_list()
             self.last_obs = obs_list
+
+            # plt.figure()
+            # pareto_x = [particle.fitness[0] for particle in self.pso.pareto_front]
+            # pareto_y = [particle.fitness[1] for particle in self.pso.pareto_front]
+            # plt.scatter(pareto_x, pareto_y, s=5)
+            # plt.savefig("Pareto_try")
+            # input()
 
         return self.observe(agent_id)
 

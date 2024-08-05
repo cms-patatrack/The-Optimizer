@@ -11,7 +11,7 @@ from tqdm import tqdm
 import torch as th
 from optimizer.masked_actor_critic import MaskedActorCriticPolicy
 
-def train(env_fn, steps: int = 1e4, seed: int = 0, **env_kwargs):
+def train(env_fn, steps: int = 1e4, seed: int = 0, name = '', **env_kwargs):
     env = env_fn.parallel_env(**env_kwargs)
     env = ss.pettingzoo_env_to_vec_env_v1(env)
     env = ss.concat_vec_envs_v1(env, num_vec_envs = 1, num_cpus=1, base_class="stable_baselines3")
@@ -20,7 +20,7 @@ def train(env_fn, steps: int = 1e4, seed: int = 0, **env_kwargs):
     print("Action Space:", env.action_space)
 
     policy_kwargs = dict(activation_fn=th.nn.Tanh,
-                     net_arch=dict(pi=[10, 5], vf=[10, 5]))
+                     net_arch=dict(pi=[5, 5], vf=[5, 5]))
     
     model = PPO(
         MaskedActorCriticPolicy,
@@ -38,8 +38,8 @@ def train(env_fn, steps: int = 1e4, seed: int = 0, **env_kwargs):
     print(model.policy)
     print("-" * 100)
     print("Started training")
-    model.learn(total_timesteps=steps, progress_bar=True, callback=callback.CustomCallback())
-    model.save("model")
+    model.learn(total_timesteps=steps, progress_bar=True, callback=callback.CustomCallback(name=name))
+    model.save(f"{name}_model")
     print("Model has been saved.")
     print("Training complete")
     env.close()

@@ -173,3 +173,4 @@ tmp
 *.npy
 *.zip
 *.html
+*.json

@@ -23,8 +23,9 @@ class CustomCallback(BaseCallback):
     to have access to the parent object
     self.parent = None  # type: Optional[BaseCallback]
     """
-    def __init__(self, verbose: int = 0):
+    def __init__(self, name = '', verbose: int = 0):
         super().__init__(verbose)
+        self.name = name
 
     def _on_training_start(self) -> None:
         """
@@ -33,7 +34,7 @@ class CustomCallback(BaseCallback):
         self.keys = self.locals["self"].env.unwrapped.vec_envs[0].par_env.agents
         self.cumulative_episode_reward = {k : [] for k in self.keys}
         self.rewards = {k : [] for k in self.keys}
-        self.num_timesteps
+        self.num_timesteps 
 
     def _on_rollout_start(self) -> None:
         """
@@ -52,12 +53,15 @@ class CustomCallback(BaseCallback):
 
         :return: If the callback returns False, training is aborted early.
         """
+        # hv = self.locals["model"].env.unwrapped.vec_envs[0].par_env.aec_env.env.hv
+        # self.hvs.append(hv)
         for i, k in enumerate(self.rewards.keys()):
                 self.rewards[k].append(self.locals["rewards"][i])
         if np.any(self.locals["dones"]):
             for k in self.cumulative_episode_reward.keys():
                 self.cumulative_episode_reward[k].append(np.sum(self.rewards[k]))
             self.rewards = {k : [] for k in self.keys}
+
         return True
 
     def _on_rollout_end(self) -> None:
@@ -76,11 +80,16 @@ class CustomCallback(BaseCallback):
 
         matrix = np.array(list(self.cumulative_episode_reward.values()))
         mean = np.mean(matrix, axis = 0)
-        np.save("mean_reward.npy", mean)
-        np.save("rewards.npy", matrix)
+        np.save(f"{self.name}_mean_reward.npy", mean)
+        np.save(f"{self.name}_rewards.npy", matrix)
         plt.plot(mean, color = 'black', label = "mean")
         plt.xlabel("Episodes")
         plt.ylabel("Agents reward")
         plt.legend(loc = 'lower right')
-        plt.savefig("Cumulative_episodes_rewards.png")
+        plt.savefig(f"{self.name}_Cumulative_episodes_rewards.png")
         plt.close()
+
+        # plt.figure()
+        # plt.plot(self.hvs)
+        # plt.savefig(f"{self.name}_hvs.png")
+        # plt.close()

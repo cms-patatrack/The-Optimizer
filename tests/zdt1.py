@@ -4,12 +4,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
+from pymoo.indicators.hv import HV
 
 import warnings
 warnings.filterwarnings("error")
 
-num_agents = 100
-num_iterations = 100
+num_agents = 50
+num_iterations = 2
 num_params = 30
 
 lb = [0.] * num_params
@@ -53,6 +54,11 @@ real_x = (np.linspace(0, 1, n_pareto_points))
 real_y = 1-np.sqrt(real_x)
 plt.scatter(real_x, real_y, s=5, c='red')
 plt.scatter(pareto_x, pareto_y, s=5)
+
+ind = HV(ref_point=[5,5])
+hv_real = ind(np.array([[real_x[i], real_y[i]] for i in range(len(real_x))]))
+hv_pso = ind(np.array([p.fitness.tolist() for p in pso.pareto_front]))
+print(round(hv_pso / hv_real, 2))
 
 if not os.path.exists('tmp'):
     os.makedirs('tmp')

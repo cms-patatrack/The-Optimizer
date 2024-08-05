@@ -94,15 +94,6 @@ class Particle:
 
         dominated = get_dominated(fitnesses, len_fitness)
 
-    def __eq__(self, other):
-        if isinstance(other, Particle):
-            return np.all(self.position == other.position) and np.all(self.velocity == other.velocity)
-        return False
-
-    def __hash__(self):
-        return hash((tuple(self.position.tolist()), tuple(self.velocity.tolist())))
-
-
 def weighted_crowding_distance_topology(pareto_front, crowding_distances, higher):
     pdf = boltzmann(crowding_distances, higher)
     return Randomizer.rng.choice(pareto_front, p=pdf)

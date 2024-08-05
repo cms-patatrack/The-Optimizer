@@ -54,21 +54,21 @@ def observe_list(pso, good_points_positions, bad_points_positions, radius, max_d
         # progress
         observe_list = [[] for i in range(len(pso.particles))]
 
-        positions = [p.position for p in pso.particles]
+        # positions = [p.position for p in pso.particles]
         progress = pso.iteration / pso_iterations
         
         for i, particle in enumerate(pso.particles):
             bad_points_in_sphere = sphere(particle.position, radius, bad_points_positions) if len(bad_points_positions) > 0 else 0
             good_points_in_sphere = sphere(particle.position, radius, good_points_positions) if len(good_points_positions) > 0 else 0
 
-            distance = np.linalg.norm(positions - positions[i], axis=1)
-            mean_distance = np.sum(distance) / (len(pso.particles) - 1) / max_dist
+            # distance = np.linalg.norm(positions - positions[i], axis=1)
+            # mean_distance = np.sum(distance) / (len(pso.particles) - 1) / max_dist
 
             particle_observation = [
                         bad_points_in_sphere,
                         good_points_in_sphere,
-                        particle.iterations_from_best_position,
-                        mean_distance,
+                        # particle.iterations_with_no_improvement,
+                        # mean_distance,
                         progress,
                         # distance_good_points,
                         # num_good_points,

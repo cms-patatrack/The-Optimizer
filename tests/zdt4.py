@@ -38,9 +38,9 @@ objective = optimizer.ElementWiseObjective([zdt4_objective1, zdt4_objective2])
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
-                      inertia_weight=0.4, cognitive_coefficient=1.5, social_coefficient=2,
+                      inertia_weight=0.4, cognitive_coefficient=1., social_coefficient=2,
                       initial_particles_position='random', topology = 'random',
-                      exploring_particles=True, max_pareto_lenght=2*num_agents)
+                      exploring_particles=False, max_pareto_lenght=2*num_agents)
 
 # run the optimization algorithm
 pso.optimize(num_iterations, max_iterations_without_improvement=10)

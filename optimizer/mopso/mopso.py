@@ -6,6 +6,7 @@ from optimizer import Optimizer, FileManager, Randomizer, Logger
 import scipy.stats as stats
 from .particle import Particle
 from optimizer.util import get_dominated
+import time
 
 from stable_baselines3 import PPO
 from optimizer.reinforcement_learning_utils import observe_list, find_new_bad_points
@@ -53,7 +54,7 @@ class MOPSO(Optimizer):
                  initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology='random',
                  max_pareto_lenght=-1,
-                 rl_model = None, radius = None):
+                 rl_model = None, radius_scaler = 0.021):
 
         self.objective = objective
         self.num_particles = num_particles
@@ -89,7 +90,7 @@ class MOPSO(Optimizer):
         self.exploring_particles = exploring_particles
         VALID_INITIAL_PARTICLES_POSITIONS = {
             'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
-
+        
         VALID_TOPOLOGIES = {
             'random', 'lower_weighted_crowding_distance', 'round_robin'}
 
@@ -155,17 +156,17 @@ class MOPSO(Optimizer):
         # Reinforcement learning stuff
         self.use_rl = False
         self.rl_model = rl_model
-        if rl_model is not None:
+        self.evaluations = []
+        if self.rl_model is not None:
             self.use_rl = True
             self.max_dist = np.linalg.norm(np.array(self.upper_bounds) - np.array(self.lower_bounds))
-            self.radius = 0.021 * self.max_dist if radius == None else radius
-            print("Radius ", self.radius)
+            self.radius = radius_scaler * self.max_dist
+            print(f"Radius {self.radius}")
             self.bad_points = []
-            self.evaluations = []
             self.bad_points_per_iteration = []
             self.pareto_points_per_iteration = []
 
-            if self.rl_model != "Random":
+            if self.rl_model != "random" and self.rl_model != "explainable":
                 self.model = PPO.load(rl_model)
             
 
@@ -225,7 +226,8 @@ class MOPSO(Optimizer):
         else:
             if len(mask) != self.num_particles:
                 raise Exception("Mask must be of length num_particles")
-            
+
+        self.evaluations.append(sum(mask))    
         optimization_output = self.objective.evaluate(
             [particle.position for particle in self.particles], mask)
         # self.remove_inf(mask)
@@ -252,27 +254,32 @@ class MOPSO(Optimizer):
         self.iteration += 1
         return improving_evaluations
 
-    def optimize(self, num_iterations=100, max_iterations_without_improvement=None, max_time = np.inf):
+    def optimize(self, num_iterations=100, max_iterations_without_improvement=None, time_limit = np.inf):
         Logger.info("Starting MOPSO optimization")
         self.useful_evaluations = []
         pareto_len = []
         crowding_distances = []
         self.num_iterations = num_iterations
-        time_diff = 0
         start_time= time.time() 
         for _ in range(self.iteration, num_iterations):
-            if time_diff > max_time:
-                print("Max time reached")
-                break
             mask = None
             if self.use_rl:
-                observations = observe_list(self.particles,
+                observations = observe_list(self,
                             np.array([p.position for p in self.pareto_front]),
                             np.array(self.bad_points),
-                            self.radius
+                            self.radius,
+                            self.max_dist,
+                            self.num_iterations
                             )
                 # print("obs ", observations)
-                if self.rl_model != "Random":
+                if self.rl_model == "explainable":
+                    mask = np.full(self.num_particles, True)
+                    for i in range(self.num_particles):
+                        num_bad_points = observations[i][0]
+                        num_pareto_points = observations[i][1]
+                        if num_bad_points > 0 and num_pareto_points / num_bad_points < 5:
+                            mask[i] = False
+                elif self.rl_model != "random":
                     mask = np.array(self.model.predict(observations, deterministic=True)[0], dtype = bool)
                 else:
                     mask = np.random.randint(0, 2, self.num_particles, dtype=bool)
@@ -280,14 +287,16 @@ class MOPSO(Optimizer):
                         if observations[i][0] == 0 and observations[i][1] == 0:
                             mask[i] = True
                 # print(mask)
-                self.evaluations.append(np.sum(mask))
                 self.bad_points_per_iteration.append(np.sum(observations, axis = 0)[0])
-                self.pareto_points_per_iteration.append(np.sum(observations, axis = 0)[1])
-            self.step(max_iterations_without_improvement, mask = mask)
+                self.pareto_points_per_iteration.append(np.sum(observations, axis = 0)[1])    
+            self.step(max_iterations_without_improvement = max_iterations_without_improvement, mask = mask)
             pareto_len.append(len(self.pareto_front))
             # crowding_distances.append(list(self.calculate_crowding_distance(self.particles).values()))
-            end_time = time.time()
-            time_diff =  end_time - start_time
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= time_limit:
+                print("Reached time limit") 
+                break
+        self.execution_time = elapsed_time
 
         Logger.info("MOPSO optimization finished")
         self.save_state()

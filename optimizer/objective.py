@@ -30,7 +30,7 @@ class Objective():
     def evaluate(self, items, mask=None):
         if mask is None:
             mask = np.full((len(items)), True, dtype=bool)
-        result = [objective_function(items[mask])
+        result = [objective_function(np.array(items)[mask])
                   for objective_function in self.objective_functions]
         solutions = []
         for r in result:
