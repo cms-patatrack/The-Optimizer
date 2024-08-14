@@ -112,7 +112,7 @@ class FileManager:
         if not os.path.exists(folder):
             os.makedirs(folder)
         Logger.debug("Saving to '%s'", full_path)
-        with open(full_path, 'wb', encoding='utf-8') as f:
+        with open(full_path, 'wb') as f:
             pickle.dump(obj, f)
 
     @classmethod

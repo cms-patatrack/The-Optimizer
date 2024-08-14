@@ -220,8 +220,8 @@ class MOPSO(Optimizer):
         Logger.info(f"Starting MOPSO optimization from iteration {self.iteration} to {num_iterations}")
         for _ in range(self.iteration, num_iterations):
             self.step(max_iterations_without_improvement)
-        self.save_state()
-        self.export_state()
+            self.save_state()
+            self.export_state()
 
         return self.pareto_front
 
