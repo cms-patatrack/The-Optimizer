@@ -121,7 +121,7 @@ class FileManager:
         Logger.debug("Loading from '%s'", full_path)
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
-        with open(full_path, 'rb', encoding='utf-8') as f:
+        with open(full_path, 'rb') as f:
             return pickle.load(f)
 
 
