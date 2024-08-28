@@ -1,8 +1,8 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='optimizer',
     version='0.1.4',
-    packages=find_packages(include=['optimizer', 'optimizer.*']),
+    packages=['optimizer', 'optimizer.mopso'],
 	install_requires=['scikit-learn','numpy','matplotlib','pandas', 'numba']
 )
