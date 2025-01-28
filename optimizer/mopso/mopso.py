@@ -116,7 +116,7 @@ class MOPSO(Optimizer):
                         raise ValueError(
                             f"Type {type(self.lower_bounds[i])} not supported")
                     positions.append(position)
-                return np.array(positions)
+                return np.array(positions, dtype=object)
             [particle.set_position(random_position())
              for particle in self.particles]
         elif initial_particles_position == 'gaussian':
