@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "TheOptimizer"
+dynamic = ["version"]
+dependencies = [
+    "scikit-learn",
+    "numpy",
+    "matplotlib",
+    "pandas"
+]
+readme = "README.md"
+description = "A optimization library for multi-objective optimization problems."
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+]
+
+[project.optional-dependencies]
+numba = ["numba"]
+
+[project.urls]
+"Source Code" = "https://github.com/cms-patatrack/The-Optimizer"
+"Issues" = "https://github.com/cms-patatrack/The-Optimizer/issues"
+
+
+[tool.setuptools.packages.find]
+where = ["optimizer", "optimizer.mopso"]
+
+[tool.setuptools_scm]

@@ -4,7 +4,16 @@ import json
 import logging
 import pickle
 import numpy as np
-from numba import njit
+
+# If numba is installed import it and use njit decorator otherwise use a dummy decorator
+try:
+    from numba import njit
+except ImportError:
+    def njit(*args, **kwargs):
+        def dummy_decorator(func):
+            return func
+        return dummy_decorator
+
 
 
 class CustomFormatter(logging.Formatter):

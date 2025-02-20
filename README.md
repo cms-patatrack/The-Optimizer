@@ -161,8 +161,8 @@ The supported levels - from least to most verbose - are: `ERROR`, `WARN`, `INFO`
 
 ## Contributing
 
-Contributions are welcome. If you want to contribute, please follow the [Contribution guidelines](CONTRIBUTING.md).
+Contributions are welcome. If you want to contribute, please follow the [Contribution guidelines](https://github.com/cms-patatrack/The-Optimizer/blob/main/CONTRIBUTING.md).
 
 ## License
 
-The Optimizer is distributed under the [MPL 2.0 License](LICENSE). Feel free to use, modify, and distribute the code following the terms of the license.  
+The Optimizer is distributed under the [MPL 2.0 License](https://github.com/cms-patatrack/The-Optimizer/blob/main/LICENSE). Feel free to use, modify, and distribute the code following the terms of the license.  
