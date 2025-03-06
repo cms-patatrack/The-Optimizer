@@ -16,7 +16,7 @@ description = "A optimization library for multi-objective optimization problems.
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
-    "License :: OSI Approved :: Mozzila Public License 2.0 (MPL 2.0)"
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
 ]
 
 [project.optional-dependencies]
@@ -28,6 +28,6 @@ numba = ["numba"]
 
 
 [tool.setuptools.packages.find]
-where = ["optimizer", "optimizer.mopso"]
+where = ["src"]
 
 [tool.setuptools_scm]
