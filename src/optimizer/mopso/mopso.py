@@ -285,3 +285,12 @@ class MOPSO(Optimizer):
                 particle.velocity[i] = 1
             else:
                 particle.velocity[i] = -1
+
+    def get_metric(self, metric):
+        if self.objective.true_pareto is None:
+            raise ValueError(
+                "True pareto function is not defined for this objective.")
+        pareto = np.array([particle.fitness for particle in self.pareto_front])
+        x = np.linspace(0, 1, max(100, len(pareto)))
+        reference_pareto = np.array(self.objective.true_pareto(x)).T
+        return metric(pareto, reference_pareto)

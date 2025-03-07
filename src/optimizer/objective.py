@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Objective():
-    def __init__(self, objective_functions, num_objectives=None) -> None:
+    def __init__(self, objective_functions, num_objectives=None, true_pareto=None) -> None:
         if not isinstance(objective_functions, list):
             self.objective_functions = [objective_functions]
         else:
@@ -12,6 +12,8 @@ class Objective():
             self.num_objectives = len(self.objective_functions)
         else:
             self.num_objectives = num_objectives
+        
+        self.true_pareto = true_pareto
 
     def evaluate(self, items):
         result = [objective_function(items)
