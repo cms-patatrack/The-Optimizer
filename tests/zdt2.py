@@ -24,12 +24,19 @@ def zdt2_objective2(x):
     f2 = g * h
     return f2
 
+def true_pareto(x):
+    f1 = x
+    f2 = 1 - np.power(x, 2)
+    return f1, f2
+
+if not os.path.exists('tmp'):
+    os.makedirs('tmp')
 
 optimizer.FileManager.working_dir = "tmp/zdt2/"
 optimizer.FileManager.loading_enabled = False
 optimizer.FileManager.saving_enabled = True
 
-objective = optimizer.ElementWiseObjective([zdt2_objective1, zdt2_objective2])
+objective = optimizer.ElementWiseObjective([zdt2_objective1, zdt2_objective2], true_pareto=true_pareto)
 
 pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
                       num_particles=num_agents,
@@ -39,17 +46,7 @@ pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
 pso.optimize(num_iterations)
 
 fig, ax = plt.subplots()
+pso.tight_plot(plot_true_pareto=True, label="ZDT2")
+plt.show()
 
-pareto_front = pso.pareto_front
-n_pareto_points = len(pareto_front)
-pareto_x = [particle.fitness[0] for particle in pareto_front]
-pareto_y = [particle.fitness[1] for particle in pareto_front]
-
-real_x = (np.linspace(0, 1, n_pareto_points))
-real_y = 1 - np.power(real_x, 2)
-plt.scatter(real_x, real_y, s=5, c='red')
-plt.scatter(pareto_x, pareto_y, s=5)
-
-if not os.path.exists('tmp'):
-    os.makedirs('tmp')
 plt.savefig('tmp/pf.png')
