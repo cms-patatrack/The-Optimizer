@@ -9,6 +9,7 @@ import numpy as np
 try:
     from numba import njit
 except ImportError:
+    logging.warning("Numba is not installed. The code will run slower.")
     def njit(f=None, *args, **kwargs):
         def dummy_decorator(func):
             return func

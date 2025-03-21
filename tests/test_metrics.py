@@ -41,8 +41,7 @@ pso.optimize(num_iterations, max_iterations_without_improvement=5)
 
 print("Generational distance: " ,pso.get_metric(optimizer.metrics.generational_distance))
 print("Inverted generational distance: " ,pso.get_metric(optimizer.metrics.inverted_generational_distance))
-print("Generational distance plus: " ,pso.get_metric(optimizer.metrics.generational_distance_plus))
-print("Inverted generational distance plus: " ,pso.get_metric(optimizer.metrics.inverted_generational_distance_plus))
+print("Hypervolume: " ,pso.get_metric(optimizer.metrics.hypervolume_indicator))
 
 fig, ax = plt.subplots()
 pareto_x = [particle.fitness[0] for particle in pso.pareto_front]
