@@ -9,10 +9,15 @@ import numpy as np
 try:
     from numba import njit
 except ImportError:
-    def njit(*args, **kwargs):
+    logging.warning("Numba is not installed. The code will run slower.")
+    def njit(f=None, *args, **kwargs):
         def dummy_decorator(func):
             return func
-        return dummy_decorator
+
+        if callable(f):
+            return f
+        else:
+            return dummy_decorator
 
 
 
@@ -136,7 +141,7 @@ class FileManager:
 
 @njit
 def get_dominated(particles, pareto_lenght):
-    dominated_particles = np.full(len(particles), False)
+    dominated_particles = np.full(len(particles), False, dtype=np.bool_)
     for i, pi in enumerate(particles):
         for j, pj in enumerate(particles):
             if (i < pareto_lenght and j < pareto_lenght) or i == j:
@@ -145,4 +150,4 @@ def get_dominated(particles, pareto_lenght):
                     np.all(pi >= pj):
                 dominated_particles[i] = True
                 break
-    return dominated_particles
+    return dominated_particles.astype(np.bool_)
