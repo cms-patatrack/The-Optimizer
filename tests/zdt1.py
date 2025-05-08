@@ -40,19 +40,17 @@ pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub, par
 # run the optimization algorithm
 pso.optimize(num_iterations, max_iterations_without_improvement=5)
 
-print(len(pso.pareto_front))
 fig, ax = plt.subplots()
-
-pareto_front = pso.pareto_front
-n_pareto_points = len(pareto_front)
-pareto_x = [particle.fitness[0] for particle in pareto_front]
-pareto_y = [particle.fitness[1] for particle in pareto_front]
-real_x = (np.linspace(0, 1, n_pareto_points))
-real_y = 1-np.sqrt(real_x)
-plt.scatter(real_x, real_y, s=5, c='red')
-plt.scatter(pareto_x, pareto_y, s=5)
-
-if not os.path.exists('tmp'):
-    os.makedirs('tmp')
+pso.tight_plot(plot_true_pareto=True, label="ZDT1")
+plt.show()
 plt.savefig('tmp/pf.png')
-plt.close()
+
+fig, ax = plt.subplots()
+pso.parallel_coordinates(ax=ax, highlighted_particle=None)
+plt.show()
+plt.savefig('tmp/pc.png')
+
+fig = plt.figure()
+pso.scatter(fig)
+plt.show()
+plt.savefig('tmp/sc.png')
