@@ -9,7 +9,8 @@ dependencies = [
     "scikit-learn",
     "numpy",
     "matplotlib",
-    "pandas"
+    "pandas",
+    "dill"
 ]
 readme = "README.md"
 description = "A optimization library for multi-objective optimization problems."

@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import logging
-import pickle
+import dill as pickle
 import numpy as np
 
 # If numba is installed import it and use njit decorator otherwise use a dummy decorator
@@ -127,7 +127,7 @@ class FileManager:
             os.makedirs(folder)
         Logger.debug("Saving to '%s'", full_path)
         with open(full_path, 'wb') as f:
-            pickle.dump(obj, f)
+            pickle.dump(obj, f, recurse=True)
 
     @classmethod
     def load_pickle(cls, filename):
