@@ -68,23 +68,27 @@ class Randomizer:
 class FileManager:
     saving_enabled = True
     loading_enabled = False
+    headers_enabled = False
     working_dir = "tmp"
 
     @classmethod
-    def save_csv(cls, csv_list, filename="file.csv"):
+    def save_csv(cls, csv_list, filename="file.csv", headers=None):
         if not cls.saving_enabled:
             Logger.debug("Saving is disabled.")
             return
         full_path = os.path.join(cls.working_dir, filename)
         folder = os.path.dirname(full_path)
         if not os.path.exists(folder):
-            Logger.debug("Creating folder '%s'",folder)
+            Logger.debug("Creating folder '%s'", folder)
             os.makedirs(folder)
-        Logger.debug("Saving to '%s'",full_path)
-        np.savetxt(full_path,
-                   csv_list,
-                   fmt='%.18f',
-                   delimiter=',')
+        Logger.debug("Saving to '%s'", full_path)
+        arr = np.array(csv_list, dtype=float)
+        if cls.headers_enabled and headers is not None:
+            with open(full_path, 'w') as f:
+                f.write(','.join(headers) + '\n')
+                np.savetxt(f, arr, fmt='%.18f', delimiter=',')
+        else:
+            np.savetxt(full_path, arr, fmt='%.18f', delimiter=',')
 
     @classmethod
     def save_json(cls, dictionary, filename="file.json"):
@@ -105,7 +109,13 @@ class FileManager:
         Logger.debug("Loading from '%s'", full_path)
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
-        return np.genfromtxt(full_path, delimiter=',', dtype=float)
+        if cls.headers_enabled:
+            # If headers are enabled, we assume the first row is the header
+            data = np.genfromtxt(full_path, delimiter=',', dtype=float, skip_header=1)
+            headers = np.genfromtxt(full_path, delimiter=',', dtype=str, max_rows=1)
+            return data, headers
+        else:
+            return np.genfromtxt(full_path, delimiter=',', dtype=float), None
 
     @classmethod
     def load_json(cls, filename):

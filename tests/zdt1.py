@@ -11,6 +11,7 @@ num_params = 30
 
 lb = [0.] * num_params
 ub = [1.] * num_params
+p_names = [f"x{i}" for i in range(num_params)]
 
 optimizer.Logger.setLevel('DEBUG')
 
@@ -26,11 +27,12 @@ optimizer.Randomizer.rng = np.random.default_rng(46)
 
 optimizer.FileManager.working_dir = "tmp/zdt1/"
 optimizer.FileManager.loading_enabled = False
-optimizer.FileManager.saving_enabled = False
+optimizer.FileManager.saving_enabled = True
+optimizer.FileManager.headers_enabled = True
 
-objective = optimizer.ElementWiseObjective(zdt1_objective, 2)
+objective = optimizer.ElementWiseObjective(zdt1_objective, 2, objective_names=['f1', 'f2'])
 
-pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub,
+pso = optimizer.MOPSO(objective=objective, lower_bounds=lb, upper_bounds=ub, param_names=p_names,
                       num_particles=num_agents,
                       inertia_weight=0.4, cognitive_coefficient=1.5, social_coefficient=2,
                       initial_particles_position='random', exploring_particles=True, max_pareto_lenght=2*num_agents)

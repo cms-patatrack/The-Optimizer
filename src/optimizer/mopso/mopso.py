@@ -17,6 +17,7 @@ class MOPSO(Optimizer):
     - objective (Objective): The objective function to be optimized.
     - lower_bounds (list): The lower bounds for each parameter.
     - upper_bounds (list): The upper bounds for each parameter.
+    - param_names (list): The names of the parameters (default: None).
     - num_particles (int): The number of particles in the swarm (default: 50).
     - inertia_weight (float): The inertia weight for particle velocity update (default: 0.5).
     - cognitive_coefficient (float): The cognitive coefficient for particle velocity update (default: 1).
@@ -32,20 +33,11 @@ class MOPSO(Optimizer):
     Methods:
     - optimize(num_iterations=100, max_iterations_without_improvement=None): Runs the MOPSO optimization algorithm for a specified number of iterations.
     - step(max_iterations_without_improvement=None): Performs a single iteration of the MOPSO algorithm.
-    """
-
-    def __init__(self, objective, lower_bounds, upper_bounds, num_particles=50, inertia_weight=0.5,
-                 cognitive_coefficient=1, social_coefficient=1, initial_particles_position='random',
-                 default_point=None, exploring_particles=False, topology='random', max_pareto_length=-1):
-        """
-        Initializes the MOPSO algorithm with the specified parameters.
-        """
-        # Implementation details...
-class MOPSO(Optimizer):
-    
+    """   
     def __init__(self,
                  objective,
-                 lower_bounds, upper_bounds, num_particles=50,
+                 lower_bounds, upper_bounds, param_names=None,
+                 num_particles=50,
                  inertia_weight=0.5, cognitive_coefficient=1, social_coefficient=1,
                  initial_particles_position='random', default_point=None,
                  exploring_particles=False, topology='random',
@@ -70,6 +62,13 @@ class MOPSO(Optimizer):
             Logger.warning(f"Warning: lower_bounds and upper_bounds have different lengths."
                            f"The lowest length ({min(len(lower_bounds), len(upper_bounds))}) is taken.")
         self.num_params = min(len(lower_bounds), len(upper_bounds))
+        if param_names is None:
+            self.param_names = [f"param_{i}" for i in range(self.num_params)]
+        else:
+            if len(param_names) != self.num_params:
+                raise ValueError(
+                    f"Number of parameter names ({len(param_names)}) does not match number of parameters ({self.num_params}).")
+            self.param_names = param_names
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
 
@@ -182,11 +181,13 @@ class MOPSO(Optimizer):
         FileManager.save_csv([np.concatenate([particle.position,
                                               particle.velocity])
                              for particle in self.particles],
-                             'checkpoint/individual_states.csv')
+                             'checkpoint/individual_states.csv',
+                             headers=self.param_names + self.objective.objective_names)
 
         FileManager.save_csv([np.concatenate([particle.position, np.ravel(particle.fitness)])
                              for particle in self.pareto_front],
-                             'checkpoint/pareto_front.csv')
+                             'checkpoint/pareto_front.csv',
+                             headers=self.param_names + self.objective.objective_names)
 
     def load_state(self):
         Logger.debug("Loading checkpoint")
@@ -201,7 +202,8 @@ class MOPSO(Optimizer):
             for p_id, particle in enumerate(self.particles)]
         FileManager.save_csv([np.concatenate([particle.position, np.ravel(
             particle.fitness)]) for particle in self.particles],
-            'history/iteration' + str(self.iteration) + '.csv')
+            'history/iteration' + str(self.iteration) + '.csv',
+            headers=self.param_names + self.objective.objective_names)
 
         crowding_distances = self.update_pareto_front()
 

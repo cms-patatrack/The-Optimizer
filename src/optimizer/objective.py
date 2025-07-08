@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Objective():
-    def __init__(self, objective_functions, num_objectives=None, true_pareto=None) -> None:
+    def __init__(self, objective_functions, num_objectives=None, objective_names=None ,true_pareto=None) -> None:
         if not isinstance(objective_functions, list):
             self.objective_functions = [objective_functions]
         else:
@@ -13,6 +13,14 @@ class Objective():
         else:
             self.num_objectives = num_objectives
         
+        if objective_names is None:
+            self.objective_names = [f"objective_{i}" for i in range(self.num_objectives)]
+        else:
+            if len(objective_names) != self.num_objectives:
+                raise ValueError(
+                    f"Number of objective names ({len(objective_names)}) does not match number of objectives ({self.num_objectives}).")
+            self.objective_names = objective_names
+
         self.true_pareto = true_pareto
 
     def evaluate(self, items):
