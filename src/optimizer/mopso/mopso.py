@@ -145,7 +145,6 @@ class MOPSO(Optimizer):
         if default_point is not None:
             self.particles[0].set_position(default_point)
         self.history = {}
-        self.dt = np.dtype([('id', int), ('position', float, (self.num_params,)), ('velocity', float, (self.num_params,))])
 
     def check_types(self):
         lb_types = [type(lb) for lb in self.lower_bounds]
@@ -208,11 +207,14 @@ class MOPSO(Optimizer):
         self.history[self.iteration] = np.array(
             [np.concatenate([[particle.id], particle.position, particle.velocity])
              for particle in self.particles],
-            dtype=self.dt
+            dtype=np.dtype([('id', int), ('position', float, (self.num_params,)), ('velocity', float, (self.num_params,))])
         )
-
         crowding_distances = self.update_pareto_front()
-
+        self.history['pareto_front'] = np.array(
+            [np.concatenate([particle.position, particle.velocity])
+             for particle in self.pareto_front],
+            dtype=[('position', float, (self.num_params,)), ('velocity', float, (self.num_params,))]
+        )
         for particle in self.particles:
             particle.update_velocity(self.pareto_front,
                                      crowding_distances,

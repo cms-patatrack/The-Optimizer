@@ -174,10 +174,14 @@ class FileManager:
         Logger.debug("Saving to '%s'", full_path)
         with h5py.File(full_path, 'w') as f:
             for iteration, data in obj.items():
-                iteration_group = f.create_group(f"iteration_{iteration}")
-                iteration_group.create_dataset("data", data=data)
+                if isinstance(iteration, int):
+                    group_name = f"iteration_{iteration}"
+                else:
+                    group_name = iteration
+                group = f.create_group(group_name)
+                group.create_dataset("data", data=data)
                 for key, value in kwargs.items():
-                    iteration_group.attrs[key] = value
+                    group.attrs[key] = value
 
     @classmethod
     def load_hdf5(cls, filename):
