@@ -74,14 +74,18 @@ class Randomizer:
 
 class FileManager:
     saving_enabled = True
+    saving_csv_enabled = False
+    saving_json_enabled = False
+    saving_hdf5_enabled = False
+    saving_pickle_enabled = False
     loading_enabled = False
     headers_enabled = False
     working_dir = "tmp"
 
     @classmethod
     def save_csv(cls, csv_list, filename="file.csv", headers=None):
-        if not cls.saving_enabled:
-            Logger.debug("Saving is disabled.")
+        if not cls.saving_enabled or not cls.saving_csv_enabled:
+            Logger.debug("Saving csv is disabled.")
             return
         full_path = os.path.join(cls.working_dir, filename)
         folder = os.path.dirname(full_path)
@@ -113,8 +117,8 @@ class FileManager:
 
     @classmethod
     def save_json(cls, dictionary, filename="file.json"):
-        if not cls.saving_enabled:
-            Logger.debug("Saving is disabled.")
+        if not cls.saving_enabled or not cls.saving_json_enabled:
+            Logger.debug("Saving json is disabled.")
             return
         full_path = os.path.join(cls.working_dir, filename)
         folder = os.path.dirname(full_path)
@@ -135,8 +139,8 @@ class FileManager:
 
     @classmethod
     def save_pickle(cls, obj, filename):
-        if not cls.saving_enabled:
-            Logger.debug("Saving is disabled.")
+        if not cls.saving_enabled or not cls.saving_pickle_enabled:
+            Logger.debug("Saving pickle is disabled.")
             return
         full_path = os.path.join(cls.working_dir, filename)
         folder = os.path.dirname(full_path)
@@ -157,8 +161,8 @@ class FileManager:
         
     @classmethod
     def save_hdf5(cls, obj, filename, **kwargs):
-        if not cls.saving_enabled:
-            Logger.debug("Saving is disabled.")
+        if not cls.saving_enabled or not cls.saving_hdf5_enabled:
+            Logger.debug("Saving HDF5 is disabled.")
             return
         if not h5py_available:
             Logger.warning("h5py is not available. Skipping HDF5 saving.")
@@ -169,10 +173,12 @@ class FileManager:
             os.makedirs(folder)
         Logger.debug("Saving to '%s'", full_path)
         with h5py.File(full_path, 'w') as f:
-            f.create_dataset("data", data=obj)
-            for key, value in kwargs.items():
-                f.attrs[key] = value
-    
+            for iteration, data in obj.items():
+                iteration_group = f.create_group(f"iteration_{iteration}")
+                iteration_group.create_dataset("data", data=data)
+                for key, value in kwargs.items():
+                    iteration_group.attrs[key] = value
+
     @classmethod
     def load_hdf5(cls, filename):
         if not h5py_available:

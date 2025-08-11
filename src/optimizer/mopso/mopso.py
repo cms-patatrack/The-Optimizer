@@ -144,7 +144,8 @@ class MOPSO(Optimizer):
 
         if default_point is not None:
             self.particles[0].set_position(default_point)
-        # Randomizer.rng = np.random.default_rng(seed)
+        self.history = {}
+        self.dt = np.dtype([('id', int), ('position', float, (self.num_params,)), ('velocity', float, (self.num_params,))])
 
     def check_types(self):
         lb_types = [type(lb) for lb in self.lower_bounds]
@@ -204,6 +205,11 @@ class MOPSO(Optimizer):
             particle.fitness)]) for particle in self.particles],
             'history/iteration' + str(self.iteration) + '.csv',
             headers=self.param_names + self.objective.objective_names)
+        self.history[self.iteration] = np.array(
+            [np.concatenate([[particle.id], particle.position, particle.velocity])
+             for particle in self.particles],
+            dtype=self.dt
+        )
 
         crowding_distances = self.update_pareto_front()
 
@@ -224,7 +230,7 @@ class MOPSO(Optimizer):
             self.step(max_iterations_without_improvement)
             self.save_state()
             self.export_state()
-
+        FileManager.save_hdf5(self.history, 'checkpoint/history.hdf5', param_names=self.param_names, objective_names=self.objective.objective_names)
         return self.pareto_front
 
     def update_pareto_front(self):
