@@ -6,17 +6,17 @@ import dill as pickle
 import numpy as np
 
 try:
-    import h5py
-    h5py_available = True
+    import zarr
+    zarr_available = True
 except ImportError:
-    logging.warning("h5py is not installed. HDF5 functionality will be disabled.")
-    h5py_available = False
+    logging.warning("zarr is not installed. Zarr functionality will be disabled.")
+    zarr_available = False
 
 # If numba is installed import it and use njit decorator otherwise use a dummy decorator
 try:
     from numba import njit
 except ImportError:
-    logging.warning("Numba is not installed. The code will run slower.")
+    logging.warning("numba package is not installed. The code will run slower.")
     def njit(f=None, *args, **kwargs):
         def dummy_decorator(func):
             return func
@@ -76,7 +76,7 @@ class FileManager:
     saving_enabled = True
     saving_csv_enabled = False
     saving_json_enabled = False
-    saving_hdf5_enabled = False
+    saving_zarr_enabled = False
     saving_pickle_enabled = False
     loading_enabled = False
     headers_enabled = False
@@ -160,39 +160,44 @@ class FileManager:
             return pickle.load(f)
         
     @classmethod
-    def save_hdf5(cls, obj, filename, **kwargs):
-        if not cls.saving_enabled or not cls.saving_hdf5_enabled:
-            Logger.debug("Saving HDF5 is disabled.")
+    def save_zarr(cls, obj, filename, **kwargs):
+        if not cls.saving_enabled or not cls.saving_zarr_enabled:
+            Logger.debug("Saving Zarr is disabled.")
             return
-        if not h5py_available:
-            Logger.warning("h5py is not available. Skipping HDF5 saving.")
+        if not zarr_available:
+            Logger.warning("zarr package is not installed. Skipping Zarr saving.")
             return
         full_path = os.path.join(cls.working_dir, filename)
         folder = os.path.dirname(full_path)
         if not os.path.exists(folder):
             os.makedirs(folder)
         Logger.debug("Saving to '%s'", full_path)
-        with h5py.File(full_path, 'w') as f:
-            for iteration, data in obj.items():
-                if isinstance(iteration, int):
-                    group_name = f"iteration_{iteration}"
-                else:
-                    group_name = iteration
-                group = f.create_group(group_name)
-                group.create_dataset("data", data=data)
-                for key, value in kwargs.items():
-                    group.attrs[key] = value
+        
+        store = zarr.ZipStore(full_path, mode='w')
+        root_group = zarr.group(store=store)
+        
+        for key, value in obj.items():
+            if isinstance(key, int):
+                group_name = f"iteration_{key}"
+            else:
+                group_name = key
+            
+            group = root_group.create_group(group_name)
+            group.create_dataset("data", data=value, overwrite=True)
+        root_group.attrs.update(kwargs)
+                
+        store.close()
 
     @classmethod
-    def load_hdf5(cls, filename):
-        if not h5py_available:
-            Logger.warning("h5py is not available. Skipping HDF5 loading.")
+    def load_zarr(cls, filename):
+        if not zarr_available:
+            Logger.warning("zarr is not available. Skipping Zarr loading.")
             return None, {}
         full_path = os.path.join(cls.working_dir, filename)
         Logger.debug("Loading from '%s'", full_path)
         if not os.path.exists(full_path):
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
-        with h5py.File(full_path, 'r') as f:
+        with zarr.open(full_path, 'r') as f:
             data = f["data"][:]
             attrs = {key: f.attrs[key] for key in f.attrs}
             return data, attrs
