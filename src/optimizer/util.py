@@ -5,6 +5,13 @@ import logging
 import dill as pickle
 import numpy as np
 
+try:
+    import h5py
+    h5py_available = True
+except ImportError:
+    logging.warning("h5py is not installed. HDF5 functionality will be disabled.")
+    h5py_available = False
+
 # If numba is installed import it and use njit decorator otherwise use a dummy decorator
 try:
     from numba import njit
@@ -91,19 +98,6 @@ class FileManager:
             np.savetxt(full_path, arr, fmt='%.18f', delimiter=',')
 
     @classmethod
-    def save_json(cls, dictionary, filename="file.json"):
-        if not cls.saving_enabled:
-            Logger.debug("Saving is disabled.")
-            return
-        full_path = os.path.join(cls.working_dir, filename)
-        folder = os.path.dirname(full_path)
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        Logger.debug("Saving to '%s'", full_path)
-        with open(full_path, 'w', encoding='utf-8') as f:
-            json.dump(dictionary, f, indent=4)
-
-    @classmethod
     def load_csv(cls, filename):
         full_path = os.path.join(cls.working_dir, filename)
         Logger.debug("Loading from '%s'", full_path)
@@ -116,6 +110,19 @@ class FileManager:
             return data, headers
         else:
             return np.genfromtxt(full_path, delimiter=',', dtype=float), None
+
+    @classmethod
+    def save_json(cls, dictionary, filename="file.json"):
+        if not cls.saving_enabled:
+            Logger.debug("Saving is disabled.")
+            return
+        full_path = os.path.join(cls.working_dir, filename)
+        folder = os.path.dirname(full_path)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        Logger.debug("Saving to '%s'", full_path)
+        with open(full_path, 'w', encoding='utf-8') as f:
+            json.dump(dictionary, f, indent=4)
 
     @classmethod
     def load_json(cls, filename):
@@ -147,14 +154,45 @@ class FileManager:
             raise FileNotFoundError(f"The file '{full_path}' does not exist.")
         with open(full_path, 'rb') as f:
             return pickle.load(f)
-
+        
+    @classmethod
+    def save_hdf5(cls, obj, filename, **kwargs):
+        if not cls.saving_enabled:
+            Logger.debug("Saving is disabled.")
+            return
+        if not h5py_available:
+            Logger.warning("h5py is not available. Skipping HDF5 saving.")
+            return
+        full_path = os.path.join(cls.working_dir, filename)
+        folder = os.path.dirname(full_path)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        Logger.debug("Saving to '%s'", full_path)
+        with h5py.File(full_path, 'w') as f:
+            f.create_dataset("data", data=obj)
+            for key, value in kwargs.items():
+                f.attrs[key] = value
+    
+    @classmethod
+    def load_hdf5(cls, filename):
+        if not h5py_available:
+            Logger.warning("h5py is not available. Skipping HDF5 loading.")
+            return None, {}
+        full_path = os.path.join(cls.working_dir, filename)
+        Logger.debug("Loading from '%s'", full_path)
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"The file '{full_path}' does not exist.")
+        with h5py.File(full_path, 'r') as f:
+            data = f["data"][:]
+            attrs = {key: f.attrs[key] for key in f.attrs}
+            return data, attrs
 
 @njit
-def get_dominated(particles, pareto_lenght):
+def get_dominated(particles, pareto_length):
     dominated_particles = np.full(len(particles), False, dtype=np.bool_)
     for i, pi in enumerate(particles):
         for j, pj in enumerate(particles):
-            if (i < pareto_lenght and j < pareto_lenght) or i == j:
+            if (i < pareto_length and j < pareto_length) or i == j:
                 continue
             if np.any(pi > pj) and \
                     np.all(pi >= pj):
