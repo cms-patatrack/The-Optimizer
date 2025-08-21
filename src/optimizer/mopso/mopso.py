@@ -27,7 +27,7 @@ class MOPSO(Optimizer):
     - default_point (list): The default point for initializing particles using Gaussian distribution (default: None).
     - exploring_particles (bool): Whether to enable particle exploration (default: False).
     - topology (str): The topology of the swarm (default: 'random').
-        Valid options are: 'random', 'lower_weighted_crowding_distance', 'round_robin'.
+        Valid options are: 'random', 'lower_weighted_crowding_distance', 'higher_weighted_crowding_distance', 'round_robin'.
     - max_pareto_length (int): The maximum length of the Pareto front (default: -1, unlimited).
 
     Methods:
@@ -85,7 +85,7 @@ class MOPSO(Optimizer):
             'lower_bounds', 'upper_bounds', 'random', 'gaussian'}
 
         VALID_TOPOLOGIES = {
-            'random', 'lower_weighted_crowding_distance', 'round_robin'}
+            'random', 'lower_weighted_crowding_distance', 'higher_weighted_crowding_distance', 'round_robin'}
 
         if topology not in VALID_TOPOLOGIES:
             raise ValueError(

@@ -83,6 +83,8 @@ class Particle:
             return Randomizer.rng.choice(pareto_front)
         elif self.topology == "lower_weighted_crowding_distance":
             return weighted_crowding_distance_topology(pareto_front, crowding_distances, higher=False)
+        elif self.topology == "higher_weighted_crowding_distance":
+            return weighted_crowding_distance_topology(pareto_front, crowding_distances, higher=True)
         elif self.topology == "round_robin":
             return round_robin_topology(pareto_front, self.id)
         else:
